@@ -1,0 +1,6 @@
+NAME: TreeSpeciesDataset
+DATA_PATH: data/STPCTLS
+N_POINTS: 1024
+NUM_CATEGORY: 7
+USE_NORMALS: FALSE
+noise_std: 0.20

@@ -1,0 +1,49 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ModelNet40FewShot.yaml
+    others:
+      K_FOLDS: 10
+      bs: 16
+      subset: train
+      way: 5
+      shot: 20
+      fold: 0
+  val:
+    _base_: cfgs/dataset/ModelNet40FewShot.yaml
+    others:
+      K_FOLDS: 10
+      bs: 16
+      subset: test
+      way: 5
+      shot: 20
+      fold: 0
+grad_norm_clip: 10
+max_epoch: 150
+model:
+  NAME: PointTNT
+  attn_dropout: 0.0
+  channels: 3
+  depth: 4
+  dilation: 1
+  dim_head: 64
+  dropout: 0.5
+  emb_dims: 1024
+  ff_dropout: 0.0
+  heads: 3
+  k: 8
+  label_smoothing: 0.0
+  n_anchor: 192
+  num_classes: 5
+  patch_dim: 192
+  point_dim: 32
+npoints: 1024
+optimizer:
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.0001
+  type: AdamW
+scheduler:
+  kwargs:
+    initial_epochs: 10
+  type: CosLR
+step_per_update: 1

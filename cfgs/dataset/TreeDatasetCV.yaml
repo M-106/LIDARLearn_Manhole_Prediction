@@ -1,0 +1,8 @@
+NAME: TreeSpeciesDatasetCV
+DATA_PATH: data/STPCTLS
+N_POINTS: 1024
+NUM_CATEGORY: 7
+USE_NORMALS: FALSE
+K_FOLDS: 5
+seed: 42
+fold: 0

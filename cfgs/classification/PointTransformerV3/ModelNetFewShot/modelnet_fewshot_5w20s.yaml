@@ -1,0 +1,69 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ModelNet40FewShot.yaml
+    others:
+      K_FOLDS: 10
+      bs: 16
+      subset: train
+      way: 5
+      shot: 20
+      fold: 0
+  val:
+    _base_: cfgs/dataset/ModelNet40FewShot.yaml
+    others:
+      K_FOLDS: 10
+      bs: 16
+      subset: test
+      way: 5
+      shot: 20
+      fold: 0
+grad_norm_clip: 10
+max_epoch: 150
+model:
+  NAME: PointTransformerV3
+  channels_input: 3
+  drop_path_rate: 0.3
+  enable_flash: false
+  enc_channels:
+  - 32
+  - 64
+  - 128
+  - 256
+  - 512
+  enc_depths:
+  - 2
+  - 2
+  - 2
+  - 6
+  - 2
+  enc_num_head:
+  - 2
+  - 4
+  - 8
+  - 16
+  - 32
+  enc_patch_size:
+  - 48
+  - 48
+  - 48
+  - 48
+  - 48
+  grid_size: 0.01
+  label_smoothing: 0.0
+  num_classes: 5
+  stride:
+  - 2
+  - 2
+  - 2
+  - 2
+npoints: 1024
+optimizer:
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.0001
+  type: AdamW
+scheduler:
+  kwargs:
+    initial_epochs: 10
+  type: CosLR
+step_per_update: 1

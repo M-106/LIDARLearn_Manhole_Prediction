@@ -1,0 +1,4 @@
+NAME: ShapeNetPartsH5
+DATA_PATH: data/ShapeNetPart/shapenet_part_seg_hdf5_data/hdf5_data
+N_POINTS: 2048
+normal_channel: False

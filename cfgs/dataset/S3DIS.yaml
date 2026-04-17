@@ -1,0 +1,13 @@
+NAME: S3DIS
+DATA_PATH: data/S3DIS/s3dis_npy
+N_POINTS: 2048
+block_size: 1.0
+sample_rate: 1.0
+test_area: 5
+# feature_mode: one of 'xyz' (3 ch), 'xyz_rgb' (6 ch), 'xyz_rgb_norm' (9 ch).
+# Default is xyz (3 ch) so every model in the library uses the same input.
+# Per-model configs can override via others.feature_mode if needed.
+feature_mode: xyz
+# speed_test_fraction: subsample rooms + per-epoch blocks for fast timing runs.
+# 1.0 = full data, 0.1 = 10% (~91x faster). Do NOT use for reporting accuracy.
+speed_test_fraction: 1.0

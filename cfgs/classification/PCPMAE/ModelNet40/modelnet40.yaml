@@ -1,0 +1,41 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ModelNet40Dataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: train
+  val:
+    _base_: cfgs/dataset/ModelNet40Dataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: val
+grad_norm_clip: 10
+max_epoch: 250
+model:
+  NAME: PCP
+  init_source: ShapeNet
+  base_model: PCP
+  cls_dim: 40
+  depth: 12
+  drop_path_rate: 0.2
+  encoder_dims: 384
+  finetuning_strategy: Full Finetuning
+  group_size: 32
+  label_smoothing: 0.0
+  num_group: 64
+  num_heads: 6
+  trans_dim: 384
+  type: full
+npoints: 1024
+optimizer:
+  kwargs:
+    lr: 0.00001
+    weight_decay: 0.05
+  type: AdamW
+scheduler:
+  kwargs:
+    initial_epochs: 10
+  type: CosLR
+step_per_update: 1

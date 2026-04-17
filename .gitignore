@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Data (download separately)
+data/
+!data/.gitkeep
+
+# Pretrained weights (download separately)
+pretrained/*.pth
+pretrained/*.pt
+
+# Experiments (generated during training)
+experiments/
+
+# Preprocessed datasets
+data/s3dis_npy/
+
+# Build artifacts (C++ extensions)
+extensions/*/build/
+extensions/*/*.egg-info/
+
+# LaTeX build artifacts
+docs/*.aux
+docs/*.bbl
+docs/*.blg
+docs/*.log
+docs/*.out
+docs/*.synctex.gz
+docs/*.pdf
+
+# IDE
+.vscode/
+.idea/
+.windsurf/
+*.swp
+*.swo
+*~
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+.~lock.*
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+
+# Original implementations (reference only, not part of library)
+Orignal implmentations/
+ICCV23-IDPT-main/
+PointGST-main/
+PPT-main/
+segmentation_for_pointm2ae/
+segmentation_for_ppt/
+dgcnn_segementation.py

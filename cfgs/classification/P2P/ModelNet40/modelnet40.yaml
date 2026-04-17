@@ -1,0 +1,44 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ModelNet40Dataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: train
+  val:
+    _base_: cfgs/dataset/ModelNet40Dataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: val
+grad_norm_clip: 10
+max_epoch: 250
+model:
+  NAME: P2P
+  base_model_variant: resnet50
+  checkpoint_path: null
+  graph_dim: 128
+  head_type: mlp
+  img_size: 224
+  imgblock_dim: 128
+  label_smoothing: 0.0
+  local_size: 32
+  mlp_dropout_ratio: 0.5
+  mlp_mid_channels:
+  - 512
+  - 256
+  num_classes: 40
+  obj_size: 224
+  trans_dim: 64
+  update_type: null
+npoints: 1024
+optimizer:
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.0001
+  type: AdamW
+scheduler:
+  kwargs:
+    initial_epochs: 10
+  type: CosLR
+step_per_update: 1

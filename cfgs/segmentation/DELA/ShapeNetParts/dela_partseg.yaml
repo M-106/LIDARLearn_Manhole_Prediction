@@ -1,0 +1,46 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ShapeNetPartsH5.yaml
+    others:
+      bs: 8
+      subset: trainval
+      K_FOLDS: 1
+  val:
+    _base_: cfgs/dataset/ShapeNetPartsH5.yaml
+    others:
+      bs: 8
+      subset: test
+      K_FOLDS: 1
+
+grad_norm_clip: 10
+max_epoch: 300
+npoints: 2048
+step_per_update: 1
+
+model:
+  NAME: DELA_Seg
+  seg_classes: 50
+  num_obj_classes: 16
+  use_cls_label: True
+  depths: [4, 4, 4, 4]
+  dims: [96, 192, 320, 512]
+  ns: [2048, 512, 192, 64]
+  ks: [20, 20, 20, 20]
+  nbr_dims: [48, 48]
+  head_dim: 320
+  head_drops: [0., 0.05, 0.1, 0.2]
+  drop_path: 0.15
+  mlp_ratio: 2
+  bn_momentum: 0.1
+  cor_std: [2.8, 5.3, 10, 20]
+
+optimizer:
+  type: AdamW
+  kwargs:
+    lr: 0.0003
+    weight_decay: 0.0001
+
+scheduler:
+  type: CosLR
+  kwargs:
+    initial_epochs: 10

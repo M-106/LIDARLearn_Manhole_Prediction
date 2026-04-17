@@ -1,0 +1,40 @@
+# Pinned dependency versions — verified on the development environment.
+# CUDA build: torch 2.4.1+cu118 / torchvision 0.19.1+cu118
+
+# Core framework
+torch==2.4.1
+torchvision==0.19.1
+timm==0.4.5
+
+# Numerics / data
+numpy==1.26.0
+scipy==1.14.1
+scikit-learn==1.5.2
+pandas==2.2.3
+h5py==3.12.1
+pyyaml==6.0.2
+easydict==1.13
+addict
+tqdm==4.66.5
+
+# Point-cloud / geometry
+open3d
+einops
+
+# Graph-neighborhood ops (PointTransformerV2 / V3, DeepGCN, P2P)
+# NOTE: these wheels are CUDA+torch-version specific. If pip install fails,
+# follow https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+torch-scatter
+torch-cluster
+torch-geometric
+
+# Model-specific runtime deps
+lightly
+termcolor
+
+# Visualization
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# Preprocessing (HELIALS LAS ingestion)
+laspy

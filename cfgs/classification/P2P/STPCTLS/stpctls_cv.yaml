@@ -1,0 +1,46 @@
+optimizer:
+  type: AdamW
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.0001
+scheduler:
+  type: CosLR
+  kwargs:
+    initial_epochs: 10
+dataset:
+  train:
+    _base_: cfgs/dataset/TreeDatasetCV.yaml
+    others:
+      subset: train
+      K_FOLDS: 5
+      fold: 0
+      bs: 16
+  val:
+    _base_: cfgs/dataset/TreeDatasetCV.yaml
+    others:
+      subset: val
+      K_FOLDS: 5
+      fold: 0
+      bs: 16
+model:
+  NAME: P2P
+  label_smoothing: 0.0
+  num_classes: 7
+  base_model_variant: resnet50
+  head_type: mlp
+  local_size: 32
+  trans_dim: 64
+  graph_dim: 128
+  imgblock_dim: 128
+  img_size: 224
+  obj_size: 224
+  checkpoint_path: null
+  update_type: null
+  mlp_mid_channels:
+  - 512
+  - 256
+  mlp_dropout_ratio: 0.5
+npoints: 1024
+step_per_update: 1
+max_epoch: 250
+grad_norm_clip: 10

@@ -1,0 +1,35 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ModelNet40Dataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: train
+  val:
+    _base_: cfgs/dataset/ModelNet40Dataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: val
+grad_norm_clip: 10
+max_epoch: 250
+model:
+  NAME: SONet
+  dropout: 0.5
+  feature_num: 1024
+  k: 3
+  label_smoothing: 0.0
+  node_num: 64
+  num_classes: 40
+  som_k: 9
+npoints: 1024
+optimizer:
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.0001
+  type: AdamW
+scheduler:
+  kwargs:
+    initial_epochs: 10
+  type: CosLR
+step_per_update: 1

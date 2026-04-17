@@ -1,0 +1,55 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/S3DIS.yaml
+    others:
+      bs: 16
+      subset: train
+      test_area: 5
+      feature_mode: xyz
+      K_FOLDS: 1
+  val:
+    _base_: cfgs/dataset/S3DIS.yaml
+    others:
+      bs: 16
+      subset: val
+      test_area: 5
+      feature_mode: xyz
+      K_FOLDS: 1
+
+grad_norm_clip: 10
+max_epoch: 100
+npoints: 2048
+step_per_update: 1
+
+model:
+  NAME: DeepGCN_Seg
+  seg_classes: 13
+  num_obj_classes: 1
+  use_cls_label: False
+  channels: 3
+  gcn_channels: 64
+  k: 9
+  n_blocks: 14
+  emb_dims: 1024
+  c_growth: 64
+  conv: edge
+  act: relu
+  norm: batch
+  bias: true
+  stochastic: false
+  epsilon: 0.2
+  knn: matrix
+  block_type: res
+  use_dilation: true
+  dropout: 0.5
+
+optimizer:
+  type: AdamW
+  kwargs:
+    lr: 0.001
+    weight_decay: 0.0001
+
+scheduler:
+  type: CosLR
+  kwargs:
+    initial_epochs: 10

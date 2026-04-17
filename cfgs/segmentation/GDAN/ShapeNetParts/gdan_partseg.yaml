@@ -1,0 +1,45 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ShapeNetPartsH5.yaml
+    others:
+      bs: 8
+      subset: trainval
+      K_FOLDS: 1
+  val:
+    _base_: cfgs/dataset/ShapeNetPartsH5.yaml
+    others:
+      bs: 8
+      subset: test
+      K_FOLDS: 1
+
+grad_norm_clip: 10
+max_epoch: 300
+npoints: 2048
+step_per_update: 1
+
+model:
+  NAME: PointCentricSeg
+  adapter_name: GDAN
+  seg_classes: 50
+  num_obj_classes: 16
+  use_cls_label: True
+  dropout: 0.5
+  backbone:
+    NAME: GDAN
+    channels_input: 3
+    k: 30
+    num_select: 256
+    dropout: 0.4
+    num_classes: 16
+    label_smoothing: 0.0
+
+optimizer:
+  type: AdamW
+  kwargs:
+    lr: 0.0003
+    weight_decay: 0.0001
+
+scheduler:
+  type: CosLR
+  kwargs:
+    initial_epochs: 10

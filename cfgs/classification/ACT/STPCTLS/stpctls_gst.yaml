@@ -1,0 +1,43 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/TreeDataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: train
+  val:
+    _base_: cfgs/dataset/TreeDataset.yaml
+    others:
+      K_FOLDS: 1
+      bs: 16
+      subset: val
+max_epoch: 250
+model:
+  NAME: PointGST
+  init_source: ShapeNet
+  base_model: ACT
+  cls_dim: 7
+  depth: 12
+  drop_path_rate: 0.1
+  encoder_dims: 384
+  finetuning_strategy: GST
+  group_size: 32
+  local: 32
+  num_classes: 7
+  num_group: 64
+  num_heads: 6
+  rank: 36
+  trans_dim: 384
+npoints: 1024
+optimizer:
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.05
+  type: AdamW
+  part: adapt
+scheduler:
+  kwargs:
+    initial_epochs: 10
+  type: CosLR
+step_per_update: 1
+grad_norm_clip: 10

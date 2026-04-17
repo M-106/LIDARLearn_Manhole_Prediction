@@ -1,0 +1,48 @@
+optimizer:
+  type: AdamW
+  part: adapt
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.05
+scheduler:
+  type: CosLR
+  kwargs:
+    initial_epochs: 10
+dataset:
+  train:
+    _base_: cfgs/dataset/TreeDatasetCV.yaml
+    others:
+      subset: train
+      K_FOLDS: 5
+      fold: 0
+      bs: 16
+  val:
+    _base_: cfgs/dataset/TreeDatasetCV.yaml
+    others:
+      subset: val
+      K_FOLDS: 5
+      fold: 0
+      bs: 16
+model:
+  NAME: PointGPT_GST
+  init_source: ShapeNet
+  base_model: PointGPT
+  finetuning_strategy: GST
+  label_smoothing: 0.0
+  trans_dim: 384
+  depth: 12
+  drop_path_rate: 0.1
+  cls_dim: 7
+  num_heads: 6
+  group_size: 32
+  num_group: 64
+  encoder_dims: 384
+  decoder_depth: 4
+  loss: cdl2
+  weight_center: 1
+  rank: 36
+  local: 32
+npoints: 1024
+step_per_update: 1
+max_epoch: 250
+grad_norm_clip: 10

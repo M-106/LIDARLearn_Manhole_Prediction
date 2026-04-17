@@ -1,0 +1,47 @@
+optimizer:
+  type: AdamW
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.0001
+scheduler:
+  type: CosLR
+  kwargs:
+    initial_epochs: 10
+dataset:
+  train:
+    _base_: cfgs/dataset/TreeDatasetCV.yaml
+    others:
+      subset: train
+      K_FOLDS: 5
+      fold: 0
+      bs: 16
+  val:
+    _base_: cfgs/dataset/TreeDatasetCV.yaml
+    others:
+      subset: val
+      K_FOLDS: 5
+      fold: 0
+      bs: 16
+model:
+  NAME: DeepGCN
+  channels: 64
+  k: 20
+  act: relu
+  norm: batch
+  bias: true
+  knn: matrix
+  epsilon: 0.2
+  stochastic: true
+  conv: edge
+  c_growth: 64
+  emb_dims: 1024
+  dropout: 0.5
+  n_blocks: 14
+  block_type: res
+  use_dilation: true
+  num_classes: 7
+  label_smoothing: 0.0
+npoints: 1024
+step_per_update: 1
+max_epoch: 250
+grad_norm_clip: 10

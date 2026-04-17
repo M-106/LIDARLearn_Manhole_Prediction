@@ -1,0 +1,50 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/ModelNet40FewShot.yaml
+    others:
+      K_FOLDS: 10
+      bs: 16
+      subset: train
+      way: 10
+      shot: 20
+      fold: 0
+  val:
+    _base_: cfgs/dataset/ModelNet40FewShot.yaml
+    others:
+      K_FOLDS: 10
+      bs: 16
+      subset: test
+      way: 10
+      shot: 20
+      fold: 0
+grad_norm_clip: 10
+max_epoch: 150
+model:
+  NAME: PointGST
+  base_model: RECON
+  cls_dim: 10
+  depth: 12
+  drop_path_rate: 0.1
+  encoder_dims: 384
+  finetuning_strategy: GST
+  group_size: 32
+  init_source: ShapeNet
+  label_smoothing: 0.0
+  local: 32
+  num_classes: 10
+  num_group: 64
+  num_heads: 6
+  rank: 36
+  trans_dim: 384
+npoints: 1024
+optimizer:
+  kwargs:
+    lr: 0.0005
+    weight_decay: 0.05
+  part: adapt
+  type: AdamW
+scheduler:
+  kwargs:
+    initial_epochs: 10
+  type: CosLR
+step_per_update: 1
