@@ -1,7 +1,45 @@
+
 # Manhole Prediction with LIDARlearn
 
 Deep Learning pipeline for evaluating different deep learning methods on manhole prediction.
 [Jump to original README.](#lidarlearn)
+
+
+<div align="center">
+<img src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Versiegelter_Schachtdeckel.jpg" width=30%></img><br>
+<sub>https://upload.wikimedia.org/wikipedia/commons/a/a8/Versiegelter_Schachtdeckel.jpg</sub>
+</div>
+
+
+Contents:
+- [**Installation**](#installation)
+- [**Start Training**](#start-training)
+- [**Investigate Train Results**](#investigate-train-results)
+- [**Train/Test Split**](#train--test-split)
+- [**Original Content**](#lidarlearn)
+    - [Overview](#overview)
+    - [Supported Models](#supported-models)
+    - [Key Features](#key-features)
+    - [Installation](#installation-1)
+    - [Pretrained SSL Weights](#pretrained-ssl-weights)
+    - [Supported Datasets](#supported-datasets)
+    - [Quick Start](#quick-start)
+        - [Which runner: `runner_finetune` vs `runner_finetune_test`](#which-runner-runner_finetune-vs-runner_finetune_test)
+        - [Online Augmentation](#online-augmentation)
+        - [Visualization](#visualization)
+        - [Automated reports — **LIDARLearn's headline contribution**](#automated-reports--lidarlearns-headline-contribution)
+    - [Project Structure](#project-structure)
+    - [Testing](#testing)
+    - [Roadmap / Open TODOs](#roadmap--open-todos)
+    - [Contributing](#contributing)
+    - [License](#license)
+    - [Credits](#credits)
+    - [Citation](#citation)
+    - [Contact](#contact)
+
+<br>
+
+> For model license and details see [this file](./THIRD_PARTY_NOTICES.md).
 
 
 <br><br>
@@ -126,12 +164,287 @@ python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3
                --exp_name manhole_segmentation_pointnet_test_run
 ```
 
+> You can check out the log file in your experiments folder to see some loggings and of course the output in the shell.
+
+Output:
+```text
+(lidarlearn) tobia@Vampire-Station:~/HDD/src/LIDARLearn_Manhole_Prediction$ python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml                --mode seg                --exp_name manhole_segmentation_pointnet_test_run
+Create experiment path successfully at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run
+2026-04-25 21:40:14,558 - pointnet_whuurban3D - INFO - Seed: 0 + rank=0, deterministic=False (cuDNN benchmark=ON (non-reproducible))
+2026-04-25 21:40:14,561 - pointnet_whuurban3D - INFO - Config copied to ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/config.yaml
+
+────────────────────────────────────────────────────
+  LIDARLearn
+────────────────────────────────────────────────────
+  Task         Segmentation
+  Model        PointNet (via PointCentricSeg)
+  Dataset      WHUUrban3DDataset
+  Epochs       100
+  LR           0.001
+  Batch        16
+  Metric       instance_miou
+  SegClasses   2
+  SegType      Semantic
+────────────────────────────────────────────────────
+
+2026-04-25 21:40:14,562 - pointnet_whuurban3D - INFO - [Config] Task=Segmentation | Model=PointNet (via PointCentricSeg) | Dataset=WHUUrban3DDataset | Epochs=100 | LR=0.001 | Batch=16 | Metric=instance_miou | SegClasses=2 | SegType=Semantic
+Found 26 point clouds.
+Found 4 point clouds.
+────────────────────────────────────────────────────
+  Parameters     4.14M / 4.14M (100.0%)
+  Checkpoint     from scratch
+────────────────────────────────────────────────────
+2026-04-25 21:40:14,746 - pointnet_whuurban3D - INFO - Parameters: 4.14M trainable / 4.14M total (100.0%)
+
+  Training  100 epochs  LR=0.001  metric=instance_miou
+
+2026-04-25 21:40:14,746 - pointnet_whuurban3D - INFO - Start training: 100 epochs, LR=0.001, metric=instance_miou
+  E  1  loss=0.6654  train=58.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000101  24.6s *
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-best-seg.pth
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  2  loss=0.6688  train=57.1%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000201  26.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  3  loss=0.6588  train=60.6%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000301  22.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  4  loss=0.6534  train=67.5%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000401  25.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  5  loss=0.6352  train=65.6%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000501  26.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  6  loss=0.6127  train=70.5%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000600  25.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  7  loss=0.5919  train=73.3%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000700  26.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  8  loss=0.5713  train=78.1%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000800  23.2s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E  9  loss=0.5315  train=89.6%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000900  20.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 10  loss=0.4995  train=93.4%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000976  28.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 11  loss=0.4746  train=96.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000970  24.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 12  loss=0.4351  train=97.4%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000965  23.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 13  loss=0.4021  train=98.2%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000959  22.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 14  loss=0.3767  train=99.3%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000952  24.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 15  loss=0.3596  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000946  26.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 16  loss=0.3257  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000938  24.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 17  loss=0.3033  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000930  27.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 18  loss=0.2806  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000922  21.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 19  loss=0.2657  train=99.8%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000914  26.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 20  loss=0.2485  train=99.8%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000905  23.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 21  loss=0.2293  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000895  24.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 22  loss=0.2126  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000885  22.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 23  loss=0.2067  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000875  27.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 24  loss=0.1919  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000865  29.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 25  loss=0.1786  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000854  23.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 26  loss=0.1673  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000842  23.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 27  loss=0.1626  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000831  25.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 28  loss=0.1496  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000819  26.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 29  loss=0.1478  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000807  23.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 30  loss=0.1365  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000794  20.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 31  loss=0.1275  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000781  28.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 32  loss=0.1297  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000768  24.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 33  loss=0.1181  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000755  24.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 34  loss=0.1107  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000741  22.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 35  loss=0.1066  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000727  22.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 36  loss=0.1166  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000713  28.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 37  loss=0.0942  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000699  24.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 38  loss=0.0953  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000684  23.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 39  loss=0.0943  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000670  27.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 40  loss=0.0917  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000655  23.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 41  loss=0.0919  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000640  20.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 42  loss=0.0863  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000625  26.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 43  loss=0.0763  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000609  20.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 44  loss=0.0787  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000594  24.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 45  loss=0.0760  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000579  25.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 46  loss=0.0698  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000563  21.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 47  loss=0.0713  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000548  24.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 48  loss=0.0698  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000532  21.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 49  loss=0.0643  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000516  25.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 50  loss=0.0619  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000501  22.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 51  loss=0.0610  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000485  22.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 52  loss=0.0594  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000469  24.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 53  loss=0.0617  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000453  21.2s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 54  loss=0.0581  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000438  27.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 55  loss=0.0549  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000422  26.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 56  loss=0.0579  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000407  25.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 57  loss=0.0536  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000392  23.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 58  loss=0.0565  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000376  23.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 59  loss=0.0557  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000361  24.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 60  loss=0.0592  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000346  26.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 61  loss=0.0499  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000331  27.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 62  loss=0.0523  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000317  23.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 63  loss=0.0573  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000302  22.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 64  loss=0.0514  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000288  22.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 65  loss=0.0512  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000274  24.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 66  loss=0.0494  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000260  25.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 67  loss=0.0513  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000246  25.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 68  loss=0.0473  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000233  22.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 69  loss=0.0535  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000220  21.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 70  loss=0.0484  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000207  24.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 71  loss=0.0454  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000194  23.2s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 72  loss=0.0495  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000182  21.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 73  loss=0.0442  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000170  22.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 74  loss=0.0446  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000159  23.0s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 75  loss=0.0487  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000147  25.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 76  loss=0.0447  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000136  27.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 77  loss=0.0445  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000126  22.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 78  loss=0.0472  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000116  23.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 79  loss=0.0439  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000106  25.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 80  loss=0.0467  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000096  23.2s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 81  loss=0.0422  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000087  21.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 82  loss=0.0455  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000079  26.8s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 83  loss=0.0419  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000071  25.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 84  loss=0.0422  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000063  22.2s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 85  loss=0.0442  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000055  26.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 86  loss=0.0446  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000049  25.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 87  loss=0.0484  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000042  23.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 88  loss=0.0417  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000036  25.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 89  loss=0.0432  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000031  22.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 90  loss=0.0422  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000025  22.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 91  loss=0.0508  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000021  28.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 92  loss=0.0428  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000017  22.1s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 93  loss=0.0436  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000013  24.2s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 94  loss=0.0451  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000010  20.7s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 95  loss=0.0409  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000007  24.9s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 96  loss=0.0419  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000005  22.3s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 97  loss=0.0500  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000003  25.4s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 98  loss=0.0423  train=100.0%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000002  20.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E 99  loss=0.0432  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000001  25.5s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+  E100  loss=0.0452  train=99.9%  val=100.0%  ins_mIoU=100.00%  cls_mIoU=100.00%  best=100.00%  lr=0.000001  20.6s
+Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth
+
+────────────────────────────────────────────────────
+  Results  best @ epoch 1
+────────────────────────────────────────────────────
+  Accuracy         100.00%
+  Instance mIoU    100.00%
+  Class mIoU       100.00%
+────────────────────────────────────────────────────
+
+2026-04-25 22:29:12,895 - pointnet_whuurban3D - INFO - Best @ epoch 1: ins_mIoU=100.00% cls_mIoU=100.00%
+  Outputs  ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/
+           seg_history_PointCentricSeg.csv
+           seg_summary.csv
+2026-04-25 22:29:12,895 - pointnet_whuurban3D - INFO - Saved: seg_history_PointCentricSeg.csv
+2026-04-25 22:29:12,895 - pointnet_whuurban3D - INFO - Saved: seg_summary.csv
+  Done  best: 100.00%
+
+2026-04-25 22:29:12,895 - pointnet_whuurban3D - INFO - Training complete. Best: 100.00%
+```
+
+
+<br><br>
+
+---
+### Investigate Train Results
+
+Visualization ([see visualization chapter](#visualization)):
+```bash
+python scripts/visulization/visualize_partseg.py \
+    --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
+    --ckpt experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth \
+    --num_vis 30 \
+    --out_dir experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/vis
+```
+
+After training there will be a `seg_history_PointCentricSeg.csv` in the experiment folder which is a csv file with the history of training which can be used for visualizing your training easily with pandas, matplotlib or an excel software.
+
+[> see automated reports chapter <](#automated-reports--lidarlearns-headline-contribution)
 
 <br><br>
 
 ---
 ### Train & Test Split
 
+Train-Test Split is choosen from the original split, got original split via:
 ```bash
 conda create -n whu3d python=3.12 pip -y
 conda activate whu3d
