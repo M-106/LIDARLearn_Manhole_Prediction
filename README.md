@@ -1,3 +1,177 @@
+# Manhole Prediction with LIDARlearn
+
+Deep Learning pipeline for evaluating different deep learning methods on manhole prediction.
+[Jump to original README.](#lidarlearn)
+
+
+<br><br>
+
+---
+### Installation
+
+**System Setup:**
+
+Python Environment Setup:<br>
+[from here](https://github.com/said-ohamouddou/LIDARLearn#installation)
+```bash
+conda create -n lidarlearn python=3.11 -y
+conda activate lidarlearn
+
+pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu118
+
+pip install torch-scatter torch-cluster -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
+pip install torch-geometric
+
+python -c "import torch_scatter, torch_cluster; print(torch_scatter.__version__, torch_cluster.__version__)"
+
+git clone https://github.com/M-106/LIDARLearn_Manhole_Prediction.git
+cd LIDARLearn_Manhole_Prediction
+pip install -r requirements.txt
+```
+
+<br><br>
+
+Compilation of code:
+```bash
+pip install ninja
+sudo apt install -y nvidia-cuda-toolkit
+pip install cuda-toolkit==11.8
+python -c "import torch; print(torch.cuda.is_available()); print(torch.version.cuda)"
+
+sudo apt install gcc-11 g++-11
+# set gcc to version 11 -> https://github.com/M-106/CPP/blob/main/docs/Basics/Installation.md#installation_on_linux
+# IMPORTANT -> gcc-11 should be the active compiler, check the link above to make sure about this
+
+# install cuda in the right version
+# from https://developer.nvidia.com/cuda-11-8-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Debian&target_version=11&target_type=runfile_local
+wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run
+chmod +x cuda_11.8.0_520.61.05_linux.run
+sudo sh cuda_11.8.0_520.61.05_linux.run
+# ONLY install `CUDA Toolkit` in this process!
+# Please refer to this website for help/guidance: https://github.com/M-106/Project-Helper/blob/main/guides/Remote_ML_Workflow_and_GPU_Management.md#cuda
+# IMPORTANT -> adding cuda to the path is decribed on this website, you have to do that!
+
+bash extensions/install_extensions.sh --clean
+```
+
+You should see something like:
+```text
+(lidarlearn) tobia@Vampire-Station:~/HDD/src/LIDARLearn_Manhole_Prediction$ bash extensions/install_extensions.sh --clean
+Cleaning build artifacts...
+Removing stale pip installations...
+Done.
+
+PyTorch 2.4.1+cu118 | CUDA 11.8 | GPU: NVIDIA GeForce RTX 4060 (sm_8.9)
+
+============================================================
+ Core Extensions
+============================================================
+[pointnet2_ops] Building... OK
+[chamfer_dist] Building... OK
+
+============================================================
+ Model-Specific Extensions
+============================================================
+[dela_cutils] Building... OK
+[pointops] Building... OK
+[ptv_modules] Building... OK
+[clip] Building... OK
+[index_max] Building... OK
+
+============================================================
+ 7 passed, 0 failed (out of 7 extensions)
+============================================================
+```
+
+```bash
+bash extensions/chamfer_dist/install.sh
+```
+
+```bash
+pip install pytest
+python -m pytest tests/test_configs.py -v
+# or
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests/test_configs.py -v
+```
+
+My Output:
+```bash
+- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=================================== short test summary info ====================================
+FAILED tests/test_configs.py::test_classification_model_builds[cfgs/classification/ACT/HELIALS/helials_pretrain.yaml] - FileNotFoundError: ACT_PointDistillation_Pretrain: [Errno 2] No such file or directory: 'pr...
+FAILED tests/test_configs.py::test_classification_model_builds[cfgs/classification/ACT/ShapeNet55/shapenet55_pretrain.yaml] - FileNotFoundError: ACT_PointDistillation_Pretrain: [Errno 2] No such file or directory: 'pr...
+FAILED tests/test_configs.py::test_classification_model_builds[cfgs/classification/PointBERT/HELIALS/helials_pretrain.yaml] - FileNotFoundError: PointBERT_Pretrain: [Errno 2] No such file or directory: 'pretrained/dVA...
+FAILED tests/test_configs.py::test_classification_model_builds[cfgs/classification/PointBERT/ShapeNet55/shapenet55_pretrain.yaml] - FileNotFoundError: PointBERT_Pretrain: [Errno 2] No such file or directory: 'pretrained/dVA...
+==================== 4 failed, 1109 passed, 20 warnings in 83.50s (0:01:23) ====================
+```
+
+<br><br>
+
+Other Adjustments (already done but maybe you want to adjust your datapath or something):
+- `datasets/WHUUrban3DDataset.py`
+- `datasets/__init__.py`
+- `cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml`
+- `cfgs/dataset/WHUUrban3DDataset.yaml`
+
+
+<br><br>
+
+---
+### Start Training
+
+```bash
+cd ~/HDD/src/LIDARLearn_Manhole_Prediction
+python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
+               --mode seg \
+               --exp_name manhole_segmentation_pointnet_test_run
+```
+
+
+<br><br>
+
+---
+### Train & Test Split
+
+```bash
+conda create -n whu3d python=3.12 pip -y
+conda activate whu3d
+
+pip install pywhu3d
+
+cd ~/OtherSSD/data/whu3d
+python -c "from pywhu3d.tool import WHU3D;whu3d = WHU3D(data_root='.', data_type='mls', format='h5');print('Train Split', WHU3D(data_root='.', data_type='mls', format='txt', scenes=whu3d.train_split).scenes);print('Val Split', WHU3D(data_root='.', data_type='mls', format='txt', scenes=whu3d.val_split).scenes);print('Test Split', WHU3D(data_root='.', data_type='mls', format='txt', scenes=whu3d.test_split).scenes)"
+```
+
+see [notebook](./whu_split.ipynb)
+
+Result
+
+```text
+loading h5 data... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:01:52
+Num of scenes: 38
+
+Unknown Loading Error!
+Num of scenes: 26
+Train Split ['0404', '0424', '0434', '0444', '0940', '0947', '2002', '2321', '2322', '2422', '2447', '2719', '3405', '3648', '3918', '4333', '4629', '4938', '5642', '6017', '6027', '6037', '8018', '1046', '0414', '0502']
+
+Unknown Loading Error!
+Num of scenes: 4
+Val Split ['2323', '8008', '8038', '2421']
+
+Unknown Loading Error!
+Num of scenes: 9
+Test Split ['2323', '2522', '2810', '5627', '8008', '8038', '2421', '2423', '2521']
+
+```
+
+
+<br><br>
+
+
+**Original README:**
+
+
+
 <div align="center">
 
 <img src="media/logo.png" alt="LIDARLearn logo" width="700"/>

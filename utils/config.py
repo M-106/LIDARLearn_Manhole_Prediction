@@ -30,7 +30,8 @@ def merge_new_config(config, new_config):
                 with open(val, 'r') as f:
                     try:
                         val = yaml.load(f, Loader=yaml.FullLoader)
-                    except Exception:
+                    except Exception as e:
+                        raise e
                         val = yaml.load(f)
                 config[key] = EasyDict()
                 merge_new_config(config[key], val)
