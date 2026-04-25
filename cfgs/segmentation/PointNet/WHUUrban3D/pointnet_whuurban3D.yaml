@@ -2,7 +2,7 @@ dataset:
   train:
     _base_: cfgs/dataset/WHUUrban3DDataset.yaml
     others:
-      bs: 16
+      bs: 2
       subset: train
       test_area: 5
       feature_mode: xyzi
@@ -10,14 +10,13 @@ dataset:
   val:
     _base_: cfgs/dataset/WHUUrban3DDataset.yaml
     others:
-      bs: 16
+      bs: 2
       subset: val
       test_area: 5
       K_FOLDS: 1
 
 grad_norm_clip: 10
-max_epoch: 100
-npoints: 2048
+max_epoch: 80
 step_per_update: 1
 
 model:

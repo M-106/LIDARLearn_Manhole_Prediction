@@ -70,7 +70,7 @@ class WHUUrban3DDataset(Dataset):
         self.transform = None
 
         self.train_ids = ['0404', '0424', '0434', '0444', '0940', '0947', '2002', '2321', '2322', '2422', '2447', '2719', '3405', '3648', '3918', '4333', '4629', '4938', '5642', '6017', '6027', '6037', '8018', '1046', '0414', '0502']
-        self.val_ids = ['2323', '8008', '8038', '2421']
+        self.val_ids = ['2323', '8008', '8038', '2421']  # FIXME -> '0404'
         self.test_ids = ['2323', '2522', '2810', '5627', '8008', '8038', '2421', '2423', '2521']
 
         self.partition_to_ids = {
@@ -112,10 +112,31 @@ class WHUUrban3DDataset(Dataset):
         # reduce size to fix size
         current_points = features.shape[0]
         goal_points = self.num_point
+
         if current_points != goal_points:
+
+            # pre-height filtering
             if current_points > goal_points:
+                z_threshold = 50.0  # threshol ok? => 100 cm?
+                mask = features[:, 2] <= z_threshold  # only keep points with z <= 0.1
+                features = features[mask]
+                labels = labels[mask]
+
+                # update current updated points
+                current_points = features.shape[0]
+                if current_points == 0:
+                    raise ValueError("All Points got removed during z-filter downsampling.")
+
+            if current_points > goal_points:
+                weights = np.ones(current_points)
+                weights[labels == 1] = 100.0
+                probabilities = weights / weights.sum()
+        
                 # downsampling
-                sample_idx = np.random.choice(current_points, size=goal_points, replace=False)
+                sample_idx = np.random.choice(current_points, 
+                                              size=goal_points, 
+                                              replace=False,
+                                              p=probabilities)
             elif current_points < goal_points:
                 # upsampling
                 extra = np.random.choice(current_points, size=(goal_points-current_points), replace=True)

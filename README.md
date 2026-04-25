@@ -16,6 +16,7 @@ Contents:
 - [**Start Training**](#start-training)
 - [**Investigate Train Results**](#investigate-train-results)
 - [**Train/Test Split**](#train--test-split)
+- [**Experiments (Runs)**](#experiments-runs)
 - [**Original Content**](#lidarlearn)
     - [Overview](#overview)
     - [Supported Models](#supported-models)
@@ -428,7 +429,7 @@ Save checkpoint at ./experiments/WHUUrban3D/manhole_segmentation_pointnet_test_r
 
 Visualization ([see visualization chapter](#visualization)):
 ```bash
-python scripts/visulization/visualize_partseg.py \
+python scripts/visulization/visualize_seg.py \
     --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
     --ckpt experiments/WHUUrban3D/manhole_segmentation_pointnet_test_run/ckpt-last-seg.pth \
     --num_vis 30 \
@@ -476,6 +477,32 @@ Num of scenes: 9
 Test Split ['2323', '2522', '2810', '5627', '8008', '8038', '2421', '2423', '2521']
 
 ```
+
+> Probably change split so that manholes are everywhere -> find out in which scenes manholes are!
+
+<br><br>
+
+---
+### Experiments (Runs)
+
+
+PointNet with 4096 Points
+```bash
+cd ~/HDD/src/LIDARLearn_Manhole_Prediction
+python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
+               --mode seg \
+               --exp_name manhole_segmentation_pointnet_test_run
+```
+
+
+PointNet with 90000 Points
+```bash
+cd ~/HDD/src/LIDARLearn_Manhole_Prediction
+python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
+               --mode seg \
+               --exp_name manhole_segmentation_pointnet_test_run_2
+```
+
 
 
 <br><br>
