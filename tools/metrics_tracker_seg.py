@@ -58,8 +58,9 @@ class SegMetricsTracker:
 
         # History
         self.history = {
-            'epoch': [], 'train_loss': [], 'train_acc': [],
-            'val_acc': [], 'val_class_miou': [], 'val_instance_miou': [],
+            'epoch': [], 'train_loss': [], 'train_acc': [], 'train_manhole_acc': [],
+            'val_loss': [], 'val_acc': [], 'val_manhole_acc': [], 
+            'val_class_miou': [], 'val_instance_miou': [],
         }
 
     # ------------------------------------------------------------------
@@ -109,9 +110,16 @@ class SegMetricsTracker:
         accumulator['total_seen'] += int(B * N)
 
         # Per-shape IoU
+        MANHOLE_LABEL = 1  # FIXME -> RIGHT CLASS?
+
         for i in range(B):
             segp = cur_pred[i]
             segl = target[i]
+
+            mask = (segl == MANHOLE_LABEL)
+            accumulator['manhole_seen'] += int(np.sum(mask))
+            accumulator['manhole_correct'] += int(np.sum((segp == segl) & mask))
+
             if self.seg_classes_map is not None:
                 cat_name = self.seg_label_to_cat.get(int(segl[0]), None)
                 if cat_name is None:
@@ -140,7 +148,11 @@ class SegMetricsTracker:
                     accumulator['fn'][l] += int(np.sum(~pred_l & true_l))
 
     def new_accumulator(self):
-        acc = {'total_correct': 0, 'total_seen': 0, 'shape_ious': {}}
+        acc = {'total_correct': 0, 
+               'total_seen': 0, 
+               'shape_ious': {},
+               'manhole_correct': 0,
+               'manhole_seen': 0}
         if self.seg_classes_map is None:
             # Semantic seg: global TP/FP/FN per class (correct S3DIS protocol).
             acc['tp'] = np.zeros(self.num_seg_classes, dtype=np.int64)
@@ -169,6 +181,11 @@ class SegMetricsTracker:
             if accumulator['total_seen'] > 0 else 0.0
         )
 
+        manhole_accuracy = (
+            accumulator['manhole_correct'] / float(accumulator['manhole_seen'])
+            if accumulator['manhole_seen'] > 0 else 0.0
+        )
+
         if self.seg_classes_map is None:
             # ── Semantic seg: global TP/FP/FN ──────────────────────────────
             tp = accumulator['tp']
@@ -186,6 +203,7 @@ class SegMetricsTracker:
             }
             return {
                 'accuracy': accuracy * 100.0,
+                'manhole_accuracy': manhole_accuracy * 100.0,
                 'instance_miou': miou * 100.0,
                 'class_miou': miou * 100.0,
                 'per_category_iou': {k: v * 100.0 for k, v in per_cat.items()},
@@ -201,6 +219,7 @@ class SegMetricsTracker:
             class_miou = float(np.mean(list(per_cat.values()))) if per_cat else 0.0
             return {
                 'accuracy': accuracy * 100.0,
+                'manhole_accuracy': manhole_accuracy * 100.0,
                 'instance_miou': instance_miou * 100.0,
                 'class_miou': class_miou * 100.0,
                 'per_category_iou': {k: v * 100.0 for k, v in per_cat.items()},
@@ -225,12 +244,25 @@ class SegMetricsTracker:
             self.per_category_iou_at_best = dict(metrics['per_category_iou'])
         return is_best
 
-    def update_history(self, epoch, train_loss=0.0, train_acc=0.0,
-                       val_acc=0.0, val_class_miou=0.0, val_instance_miou=0.0):
+    def update_history(self,
+                       epoch,
+                       train_loss=0.0,
+                       train_acc=0.0,
+                       train_manhole_acc=0.0,
+                       val_loss=0.0,
+                       val_acc=0.0,
+                       val_manhole_acc=0.0,
+                       val_class_miou=0.0,
+                       val_instance_miou=0.0):
         self.history['epoch'].append(epoch)
         self.history['train_loss'].append(train_loss)
         self.history['train_acc'].append(train_acc)
+        self.history['train_manhole_acc'].append(train_manhole_acc)
+
+        self.history['val_loss'].append(val_loss)
         self.history['val_acc'].append(val_acc)
+        self.history['val_manhole_acc'].append(val_manhole_acc)
+
         self.history['val_class_miou'].append(val_class_miou)
         self.history['val_instance_miou'].append(val_instance_miou)
 

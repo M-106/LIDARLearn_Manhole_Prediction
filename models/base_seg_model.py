@@ -58,10 +58,21 @@ class BaseSegModel(nn.Module, ABC):
         """
         B, C, N = pred.shape
         # NLL loss expects [B, C, N] with class dim at position 1
-        loss = F.nll_loss(pred, gt.long())
+
+        weights = torch.tensor([1.0, 100.0], device=pred.device, dtype=torch.float)
+
+        loss = F.nll_loss(pred, gt.long(), weight=weights)
+
         pred_choice = pred.argmax(dim=1)  # [B, N]
         acc = (pred_choice == gt).float().mean() * 100.0
-        return loss, acc
+        mask = (gt == 1)
+        if mask.sum() > 0:
+            manhole_acc = (pred_choice[mask] == gt[mask]).float().mean() * 100.0
+        else:
+            manhole_acc = torch.tensor(0.0, device=pred.device) # if no manhole is in the batch
+            # 100?
+        
+        return loss, acc, manhole_acc
 
     def get_num_parameters(self, trainable_only: bool = True) -> int:
         if trainable_only:

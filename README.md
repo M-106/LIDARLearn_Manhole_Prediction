@@ -488,6 +488,7 @@ Test Split ['2323', '2522', '2810', '5627', '8008', '8038', '2421', '2423', '252
 
 PointNet with 4096 Points
 ```bash
+conda activate lidarlearn
 cd ~/HDD/src/LIDARLearn_Manhole_Prediction
 python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
                --mode seg \
@@ -497,6 +498,7 @@ python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3
 
 PointNet with 90000 Points
 ```bash
+conda activate lidarlearn
 cd ~/HDD/src/LIDARLearn_Manhole_Prediction
 python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
                --mode seg \

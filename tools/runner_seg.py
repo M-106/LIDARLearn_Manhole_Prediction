@@ -12,6 +12,7 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from tqdm import tqdm
 
 from tools import builder
@@ -45,6 +46,9 @@ def _unpack_data(data, use_cls_label):
 def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label):
     model.eval()
     acc = metrics_tracker.new_accumulator()
+    total_loss = 0.0
+    total_batches = 0
+
     with torch.no_grad():
         for _, _, data in dataloader:
             points, cls_label, target = _unpack_data(data, use_cls_label)
@@ -59,12 +63,24 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
             else:
                 logits = model(points_bcn, None)
                 cls_np = np.zeros(points.shape[0], dtype=np.int32)
+            
+            # compute loss
+            weights = torch.tensor([1.0, 100.0], device=logits.device, dtype=torch.float)
+            loss = F.nll_loss(logits, target.long(), weight=weights)
 
+            total_loss += loss.item()
+            total_batches += 1
+
+            # compute accuracy
             pred_np = logits.detach().cpu().numpy()
             target_np = target.detach().cpu().numpy()
             metrics_tracker.evaluate_batch(pred_np, target_np, cls_np, acc)
 
-    return metrics_tracker.finalize(acc)
+    metrics = metrics_tracker.finalize(acc)
+
+    metrics['loss'] = total_loss / total_batches if total_batches > 0 else 0.0
+
+    return metrics
 
 
 def run_net(args, config):
@@ -151,7 +167,7 @@ def run_net(args, config):
     base_model.zero_grad()
     for epoch in range(1, max_epoch + 1):
         base_model.train()
-        losses = AverageMeter(['loss', 'acc'])
+        losses = AverageMeter(['loss', 'acc', 'manhole_acc'])
         epoch_start = time.time()
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100, leave=False)
@@ -166,7 +182,7 @@ def run_net(args, config):
                 logits = base_model(points_bcn, cls_onehot)
             else:
                 logits = base_model(points_bcn, None)
-            loss, acc = base_model.module.get_loss_acc(logits, target)
+            loss, acc, manhole_acc = base_model.module.get_loss_acc(logits, target)
 
             loss.backward()
             if grad_clip is not None:
@@ -174,8 +190,8 @@ def run_net(args, config):
             optimizer.step()
             base_model.zero_grad()
 
-            losses.update([loss.item(), acc.item()])
-            pbar.set_postfix({'loss': f'{losses.avg(0):.4f}', 'acc': f'{losses.avg(1):.1f}%'})
+            losses.update([loss.item(), acc.item(), manhole_acc.item()])
+            pbar.set_postfix({'loss': f'{losses.avg(0):.4f}', 'acc': f'{losses.avg(1):.1f}%', 'manhole_acc': f'{losses.avg(2):.1f}%'})
 
         if isinstance(scheduler, list):
             for item in scheduler:
@@ -197,8 +213,12 @@ def run_net(args, config):
             is_best = metrics_tracker.update(epoch, metrics, selection_metric=selection_metric)
             metrics_tracker.update_history(
                 epoch,
-                train_loss=losses.avg(0), train_acc=losses.avg(1),
+                train_loss=losses.avg(0), 
+                train_acc=losses.avg(1),
+                train_manhole_acc=losses.avg(2),
+                val_loss=metrics['loss'],
                 val_acc=metrics['accuracy'],
+                val_manhole_acc=metrics['manhole_accuracy'],
                 val_class_miou=metrics['class_miou'],
                 val_instance_miou=metrics['instance_miou'],
             )
