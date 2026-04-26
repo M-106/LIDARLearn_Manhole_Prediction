@@ -69,8 +69,8 @@ class BaseSegModel(nn.Module, ABC):
         if mask.sum() > 0:
             manhole_acc = (pred_choice[mask] == gt[mask]).float().mean() * 100.0
         else:
-            manhole_acc = torch.tensor(0.0, device=pred.device) # if no manhole is in the batch
-            # 100?
+            manhole_acc = torch.tensor(100.0, device=pred.device) # if no manhole is in the batch
+            # FIXME: 100 or 0 ?
         
         return loss, acc, manhole_acc
 

@@ -69,8 +69,9 @@ class WHUUrban3DDataset(Dataset):
 
         self.transform = None
 
-        self.train_ids = ['0404', '0424', '0434', '0444', '0940', '0947', '2002', '2321', '2322', '2422', '2447', '2719', '3405', '3648', '3918', '4333', '4629', '4938', '5642', '6017', '6027', '6037', '8018', '1046', '0414', '0502']
-        self.val_ids = ['2323', '8008', '8038', '2421']  # FIXME -> '0404'
+        # train normally include: '0404' but added to val, so that it have at least one
+        self.train_ids = ['0424', '0434', '0444', '0940', '0947', '2002', '2321', '2322', '2422', '2447', '2719', '3405', '3648', '3918', '4333', '4629', '4938', '5642', '6017', '6027', '6037', '8018', '1046', '0414', '0502']
+        self.val_ids = ['2323', '8008', '8038', '2421', '0404']  # FIXME -> '0404'
         self.test_ids = ['2323', '2522', '2810', '5627', '8008', '8038', '2421', '2423', '2521']
 
         self.partition_to_ids = {
@@ -129,7 +130,7 @@ class WHUUrban3DDataset(Dataset):
 
             if current_points > goal_points:
                 weights = np.ones(current_points)
-                weights[labels == 1] = 100.0
+                weights[labels == 1] = 10.0
                 probabilities = weights / weights.sum()
         
                 # downsampling
