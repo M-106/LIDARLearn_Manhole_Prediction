@@ -59,7 +59,7 @@ class WHUUrban3DDataset(Dataset):
     dataset implemented in https://github.com/M-106/MCR-Lab/blob/main/src/mcrlab/point_cloud/data.py
     """
     def __init__(self, config):
-        self.path = os.path.join(config.DATA_PATH, "mls", "h5")
+        self.path = os.path.join(config.DATA_PATH, "mls", "h5", "preprocessed")
         self.num_point = int(getattr(config, 'N_POINTS', 4096))
         self.block_size = float(getattr(config, 'block_size', 1.0))
         self.sample_rate = float(getattr(config, 'sample_rate', 1.0))
@@ -70,9 +70,13 @@ class WHUUrban3DDataset(Dataset):
         self.transform = None
 
         # train normally include: '0404' but added to val, so that it have at least one
-        self.train_ids = ['0424', '0434', '0444', '0940', '0947', '2002', '2321', '2322', '2422', '2447', '2719', '3405', '3648', '3918', '4333', '4629', '4938', '5642', '6017', '6027', '6037', '8018', '1046', '0414', '0502']
-        self.val_ids = ['2323', '8008', '8038', '2421', '0404']  # FIXME -> '0404'
-        self.test_ids = ['2323', '2522', '2810', '5627', '8008', '8038', '2421', '2423', '2521']
+        self.train_ids = ['8018', '4938', '0414', '2002', '0444', '1046', '5642', '4333', '4629', '0424', '2421', '0947', '0434', '2022', '2719', '2810', '8048', '2423', '2522', '8008', '0502', '6017', '3918', '2422', '2322', '3405', '2323', '8038']
+        self.val_ids = ['0404', '6027', '3648']
+        self.test_ids = ['0940', '2447', '6037', '2321', '8028', '5627', '2521']
+
+        self.train_ids = ['preprocessed_'+x for x in self.train_ids]
+        self.val_ids = ['preprocessed_'+x for x in self.val_ids]
+        self.test_ids = ['preprocessed_'+x for x in self.test_ids]
 
         self.partition_to_ids = {
             'train': self.train_ids,
