@@ -59,7 +59,13 @@ class WHUUrban3DDataset(Dataset):
     dataset implemented in https://github.com/M-106/MCR-Lab/blob/main/src/mcrlab/point_cloud/data.py
     """
     def __init__(self, config):
-        self.path = os.path.join(config.DATA_PATH, "mls", "h5", "preprocessed")
+        preprocessed = True
+        self.path = os.path.join(config.DATA_PATH, "mls", "h5")
+        if preprocessed:
+            self.path = os.path.join(self.path, "preprocessed")
+        print(self.path)
+        os.system("echo 'Data Dir Test'")
+        os.system(f"ls {self.path}")
         self.num_point = int(getattr(config, 'N_POINTS', 4096))
         self.block_size = float(getattr(config, 'block_size', 1.0))
         self.sample_rate = float(getattr(config, 'sample_rate', 1.0))
@@ -69,14 +75,17 @@ class WHUUrban3DDataset(Dataset):
 
         self.transform = None
 
+        print(f"Got partition: {self.partition}")
+
         # train normally include: '0404' but added to val, so that it have at least one
         self.train_ids = ['8018', '4938', '0414', '2002', '0444', '1046', '5642', '4333', '4629', '0424', '2421', '0947', '0434', '2022', '2719', '2810', '8048', '2423', '2522', '8008', '0502', '6017', '3918', '2422', '2322', '3405', '2323', '8038']
         self.val_ids = ['0404', '6027', '3648']
         self.test_ids = ['0940', '2447', '6037', '2321', '8028', '5627', '2521']
 
-        self.train_ids = ['preprocessed_'+x for x in self.train_ids]
-        self.val_ids = ['preprocessed_'+x for x in self.val_ids]
-        self.test_ids = ['preprocessed_'+x for x in self.test_ids]
+        if preprocessed:
+            self.train_ids = ['preprocessed_'+x for x in self.train_ids]
+            self.val_ids = ['preprocessed_'+x for x in self.val_ids]
+            self.test_ids = ['preprocessed_'+x for x in self.test_ids]
 
         self.partition_to_ids = {
             'train': self.train_ids,
@@ -85,11 +94,12 @@ class WHUUrban3DDataset(Dataset):
         }
 
         self.point_cloud_paths = []
-        preprocesed_path = os.path.join(self.path, "preprocessed")
-        preprocessed = False  # maybe fix in future to make preprocessed WHU dataset possible
-        path = preprocesed_path if preprocessed else self.path
-        for cur_file in os.listdir(path):
+        # preprocesed_path = os.path.join(self.path, "preprocessed")
+          # maybe fix in future to make preprocessed WHU dataset possible
+        # path = preprocesed_path if preprocessed else self.path
+        for cur_file in os.listdir(self.path):
             # if any([cur_file.endswith(ending) for ending in [".las", ".laz", ".ply"]]):
+            # print(f"File name: {cur_file}")
             if cur_file.endswith((".h5", ".ply")):
                 if preprocessed and not cur_file.startswith("preprocessed_"):
                     continue
@@ -97,7 +107,7 @@ class WHUUrban3DDataset(Dataset):
                     continue
 
                 if any([cur_file.startswith(cur_id) for cur_id in self.partition_to_ids[self.partition]]):
-                    self.point_cloud_paths.append(os.path.join(path, cur_file))
+                    self.point_cloud_paths.append(os.path.join(self.path, cur_file))
 
         print(f"Found {len(self.point_cloud_paths)} point clouds.")
 

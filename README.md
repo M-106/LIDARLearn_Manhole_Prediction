@@ -506,13 +506,24 @@ python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3
 ```
 
 
-First Training on IPM Server -> preprocessed + 50000 points
+First Training on IPM Server -> preprocessed + 50000 points + PointNet 1
 ```bash
-nohup python python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
-                            --mode seg \
-                            --exp_name manhole_segmentation_pointnet_test_segmentation \
-                            > output.log 2>&1 &
+nohup python main.py --config cfgs/segmentation/PointNet/WHUUrban3D/pointnet_whuurban3D.yaml \
+                     --mode seg \
+                     --exp_name manhole_segmentation_pointnet_test_segmentation \
+                     > output.log 2>&1 &
 ```
+
+
+
+Second Training on IPM Server -> preprocessed + 100000 points + PTv3
+```bash
+nohup python main.py --config cfgs/segmentation/PointTransformerV3/WHUUrban3D/pointtransformerv3_whuurban3D.yaml \
+                     --mode seg \
+                     --exp_name manhole_segmentation_ptv3_test_segmentation \
+                     > output.log 2>&1 &
+```
+
 
 
 <br><br>
