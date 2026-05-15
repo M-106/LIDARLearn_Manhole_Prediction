@@ -445,6 +445,8 @@ After training there will be a `seg_history_PointCentricSeg.csv` in the experime
 ---
 ### Train & Test Split
 
+> **Have to get updated! There is a new split, not the original anymore.**
+
 Train-Test Split is choosen from the original split, got original split via:
 ```bash
 conda create -n whu3d python=3.12 pip -y

@@ -1,8 +1,9 @@
 NAME: WHUUrban3DDataset
 DATA_PATH: /data # /mnt/OtherSSD/data/whu3d-dataset-wo-test-label
 NUM_CLASSES: 2   # manhole, not manhole
-N_POINTS: 1000000 # 4096   # amount of points per pointcloud -> ok?
+N_POINTS: 200000 # 4096   # amount of points per pointcloud -> ok?
 USE_NORMALS: FALSE
+block_size: 5
 # TRAIN:
 #   TRANSFORMS:
 #   - NAME: PointShuffle

@@ -29,22 +29,22 @@ def load_h5_as_numpy(path, instance_segmentation=False):
             intensities.reshape(-1, 1)
         ]).astype(np.float32)
 
-        # filter labels -> only instances with label 104002
-        mask = semantics == 104002
-        if instance_segmentation:
-            labels = np.full(instances.shape, -1, dtype=np.int64)
+        # # filter labels -> only instances with label 104002
+        # mask = semantics == 104002
+        # if instance_segmentation:
+        #     labels = np.full(instances.shape, -1, dtype=np.int64)
 
-            # only take valid instances
-            instances_filtered = instances[mask]
+        #     # only take valid instances
+        #     instances_filtered = instances[mask]
 
-            # reindex
-            # [1040023, 1040023, 5550001, 5550001, 9999999] -> [0, 0, 1, 1, 2]
-            _, new_ids = np.unique(instances_filtered, return_inverse=True)
+        #     # reindex
+        #     # [1040023, 1040023, 5550001, 5550001, 9999999] -> [0, 0, 1, 1, 2]
+        #     _, new_ids = np.unique(instances_filtered, return_inverse=True)
 
-            labels[mask] = new_ids
-        else:
-            labels = np.zeros(semantics.shape, dtype=np.int64)
-            labels[mask] = 1
+        #     labels[mask] = new_ids
+        # else:
+        #     labels = np.zeros(semantics.shape, dtype=np.int64)
+        #     labels[mask] = 1
 
         return features, labels
     else:
@@ -52,11 +52,64 @@ def load_h5_as_numpy(path, instance_segmentation=False):
         raise ValueError(f"Can't load '{file_}' as point-cloud.")
 
 
+
+def create_sliding_window_patch(point_cloud_paths,
+                                block_size,
+                                overlap=0.5):  # in percentage
+    stride = block_size * (1 - overlap)
+    patches = []
+
+    for cur_pc_path in point_cloud_paths:
+        features, labels = load_h5_as_numpy(
+            cur_pc_path,
+            instance_segmentation=False
+        )
+
+        coords = features[:, :3]
+
+        x_min = coords[:, 0].min()
+        x_max = coords[:, 0].max()
+        y_min = coords[:, 1].min()
+        y_max = coords[:, 1].max()
+
+        # maybe change to np.linspace(...)
+        x_points = np.arange(x_min, x_max + block_size, stride)
+        y_points = np.arange(y_min, y_max + block_size, stride)
+
+        for x0 in x_points:
+            for y0 in y_points:
+
+                x1 = x0 + block_size
+                y1 = y0 + block_size
+
+                mask = (
+                    (coords[:, 0] >= x0) &
+                    (coords[:, 0] < x1) &
+                    (coords[:, 1] >= y0) &
+                    (coords[:, 1] < y1)
+                )
+
+                point_indices = np.where(mask)[0]
+
+                # skip empty patches
+                if len(point_indices) < 100:
+                    continue
+
+                patches.append({
+                    "point_cloud_path": cur_pc_path,
+                    "indices": point_indices
+                })
+    return patches
+
+
+
 @DATASETS.register_module()
 class WHUUrban3DDataset(Dataset):
     """
     Note: This is an changed version of the 
     dataset implemented in https://github.com/M-106/MCR-Lab/blob/main/src/mcrlab/point_cloud/data.py
+    
+    FIXME -> need evaluation mode and also an logits mean or majority voting for overlap prediction of test/val preds
     """
     def __init__(self, config):
         preprocessed = True
@@ -67,7 +120,7 @@ class WHUUrban3DDataset(Dataset):
         os.system("echo 'Data Dir Test'")
         os.system(f"ls {self.path}")
         self.num_point = int(getattr(config, 'N_POINTS', 4096))
-        self.block_size = float(getattr(config, 'block_size', 1.0))
+        self.block_size = float(getattr(config, 'block_size', 5.0))
         self.sample_rate = float(getattr(config, 'sample_rate', 1.0))
         self.partition = config.subset    # 'train'|'val'|'test'
         self.test_area = int(getattr(config, 'test_area', 5))
@@ -111,16 +164,70 @@ class WHUUrban3DDataset(Dataset):
 
         print(f"Found {len(self.point_cloud_paths)} point clouds.")
 
+        # create sliding window patches
+        if self.partition != "train":
+            self.patches = create_sliding_window_patch(
+                point_cloud_paths=self.point_cloud_paths,
+                block_size=self.block_size,
+                overlap=0.5
+            )
+
     def __len__(self):
-        return len(self.point_cloud_paths)
+        if self.partition == "train":
+            return len(self.point_cloud_paths) * 10
+        else:
+            return len(self.patches)
 
     def __getitem__(self, idx):
-        point_cloud_path = self.point_cloud_paths[idx]
-        _, scene_name = os.path.split(point_cloud_path)
-        scene_name = ".".join(scene_name.split(".")[:-1])
+        if self.partition == "train":
+            idx = int(idx / 10)
+            point_cloud_path = self.point_cloud_paths[idx]
+            _, scene_name = os.path.split(point_cloud_path)
+            scene_name = ".".join(scene_name.split(".")[:-1])
 
-        features, labels = load_h5_as_numpy(point_cloud_path, instance_segmentation=False)
+            features, labels = load_h5_as_numpy(point_cloud_path, instance_segmentation=False)
+        
+            # choose local patch -> else too big
+            # no point reduction wanted
+            if np.any(labels == 1):
+                probs = np.ones(len(features))
+                probs[labels == 1] = 5.0
 
+                probs = probs / probs.sum()
+                center_idx = np.random.choice(len(features), p=probs)
+            else:
+                center_idx = np.random.randint(len(features))
+        
+            center = features[center_idx, :3]
+
+            radius = self.block_size
+
+            dist = np.linalg.norm(features[:, :3] - center, axis=1)
+            mask = dist < radius
+
+            features = features[mask]
+            labels = labels[mask]
+
+            # print(f"[DEBUGGING] Point Amount: {features.shape} → changed to {self.num_point}")
+        else:
+            # center_idx = np.random.randint(len(features))
+            patch_info = self.patches[idx]
+
+            point_cloud_path = patch_info["point_cloud_path"]
+            patch_indices = patch_info["indices"]
+
+            _, scene_name = os.path.split(point_cloud_path)
+            scene_name = ".".join(scene_name.split(".")[:-1])
+        
+            features, labels = load_h5_as_numpy(
+                point_cloud_path,
+                instance_segmentation=False
+            )
+
+            features = features[patch_indices]
+            labels = labels[patch_indices]
+
+        # preprocessing, augmentation
         if self.transform:
             features = self.transform(features)
 
@@ -130,21 +237,9 @@ class WHUUrban3DDataset(Dataset):
 
         if current_points != goal_points:
 
-            # pre-height filtering
-            if current_points > goal_points:
-                z_threshold = 50.0  # threshol ok? => 100 cm?
-                mask = features[:, 2] <= z_threshold  # only keep points with z <= 0.1
-                features = features[mask]
-                labels = labels[mask]
-
-                # update current updated points
-                current_points = features.shape[0]
-                if current_points == 0:
-                    raise ValueError("All Points got removed during z-filter downsampling.")
-
             if current_points > goal_points:
                 weights = np.ones(current_points)
-                weights[labels == 1] = 10.0
+                # weights[labels == 1] = 500.0
                 probabilities = weights / weights.sum()
         
                 # downsampling
@@ -160,7 +255,6 @@ class WHUUrban3DDataset(Dataset):
             # apply down or upsampling
             features = features[sample_idx]
             labels = labels[sample_idx]
-
 
         # convert to torch
         features = torch.from_numpy(features).float()      # (N, 4)

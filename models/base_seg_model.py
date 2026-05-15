@@ -59,9 +59,9 @@ class BaseSegModel(nn.Module, ABC):
         B, C, N = pred.shape
         # NLL loss expects [B, C, N] with class dim at position 1
 
-        weights = torch.tensor([1.0, 25.0], device=pred.device, dtype=torch.float)
+        weights = torch.tensor([1.0, 1.0], device=pred.device, dtype=torch.float)
 
-        loss = F.nll_loss(pred, gt.long(), weight=weights)
+        loss = F.nll_loss(pred, gt.long(), weight=weights, ignore_index=255)
 
         pred_choice = pred.argmax(dim=1)  # [B, N]
         acc = (pred_choice == gt).float().mean() * 100.0
