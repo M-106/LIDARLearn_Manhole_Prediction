@@ -14,6 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from tools import builder
 from utils import dist_utils
@@ -63,9 +64,11 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
             else:
                 logits = model(points_bcn, None)
                 cls_np = np.zeros(points.shape[0], dtype=np.int32)
-            
+
             # compute loss
-            weights = torch.tensor([1.0, 100.0], device=logits.device, dtype=torch.float)
+            weights = torch.tensor(
+                [1.0, 100.0], device=logits.device, dtype=torch.float
+            )
             loss = F.nll_loss(logits, target.long(), weight=weights)
 
             total_loss += loss.item()
@@ -78,7 +81,7 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
 
     metrics = metrics_tracker.finalize(acc)
 
-    metrics['loss'] = total_loss / total_batches if total_batches > 0 else 0.0
+    metrics["loss"] = total_loss / total_batches if total_batches > 0 else 0.0
 
     return metrics
 
@@ -94,13 +97,17 @@ def run_net(args, config):
     _, val_loader = builder.dataset_builder(args, config.dataset.val)
 
     train_dataset = train_loader.dataset
-    num_seg_classes = getattr(train_dataset, 'num_seg_classes', config.model.get('seg_classes', 50))
-    num_obj_classes = getattr(train_dataset, 'num_obj_classes', config.model.get('num_obj_classes', 16))
-    category_names = getattr(train_dataset, 'category_names', None)
+    num_seg_classes = getattr(
+        train_dataset, "num_seg_classes", config.model.get("seg_classes", 50)
+    )
+    num_obj_classes = getattr(
+        train_dataset, "num_obj_classes", config.model.get("num_obj_classes", 16)
+    )
+    category_names = getattr(train_dataset, "category_names", None)
 
-    use_cls_label = config.model.get('use_cls_label', True)
+    use_cls_label = config.model.get("use_cls_label", True)
     if use_cls_label:
-        seg_classes_map = getattr(train_dataset, 'seg_classes', None)
+        seg_classes_map = getattr(train_dataset, "seg_classes", None)
     else:
         seg_classes_map = None
 
@@ -108,18 +115,23 @@ def run_net(args, config):
     base_model = builder.model_builder(config.model)
 
     ckpt_info = None
-    if getattr(args, 'ckpts', None) is not None:
+    if getattr(args, "ckpts", None) is not None:
         pre_state = {k: v.clone() for k, v in base_model.state_dict().items()}
-        if hasattr(base_model, 'load_backbone_ckpt'):
+        if hasattr(base_model, "load_backbone_ckpt"):
             base_model.load_backbone_ckpt(args.ckpts, strict=False)
-        elif hasattr(base_model, 'load_model_from_ckpt'):
+        elif hasattr(base_model, "load_model_from_ckpt"):
             base_model.load_model_from_ckpt(args.ckpts)
         post_state = base_model.state_dict()
         loaded_count = sum(
-            1 for k in pre_state
+            1
+            for k in pre_state
             if k in post_state and not torch.equal(pre_state[k], post_state[k])
         )
-        ckpt_info = {'path': args.ckpts, 'loaded': loaded_count, 'total': len(post_state)}
+        ckpt_info = {
+            "path": args.ckpts,
+            "loaded": loaded_count,
+            "total": len(post_state),
+        }
         del pre_state
 
     if args.use_gpu:
@@ -137,7 +149,9 @@ def run_net(args, config):
     optimizer, scheduler = builder.build_opti_sche(base_model, config)
 
     total_params = sum(p.numel() for p in base_model.module.parameters())
-    trainable_params = sum(p.numel() for p in base_model.module.parameters() if p.requires_grad)
+    trainable_params = sum(
+        p.numel() for p in base_model.module.parameters() if p.requires_grad
+    )
     fmt.print_model_info(trainable_params, total_params, ckpt_info, logger=logger)
 
     # Metrics tracker
@@ -148,9 +162,9 @@ def run_net(args, config):
     )
 
     max_epoch = config.max_epoch
-    grad_clip = config.get('grad_norm_clip', None)
-    selection_metric = config.get('selection_metric', 'instance_miou')
-    early_stopping_patience = config.get('early_stopping_patience', 0)
+    grad_clip = config.get("grad_norm_clip", None)
+    selection_metric = config.get("selection_metric", "instance_miou")
+    early_stopping_patience = config.get("early_stopping_patience", 0)
     epochs_without_improvement = 0
     epoch_times = []
 
@@ -161,14 +175,18 @@ def run_net(args, config):
             logger=logger,
         )
 
-    fmt.print_training_start(config, selection_metric, early_stopping_patience, logger=logger)
+    fmt.print_training_start(
+        config, selection_metric, early_stopping_patience, logger=logger
+    )
 
-    best_metrics_dict = {}   # persisted to checkpoint so best epoch is recoverable
+    best_metrics_dict = {}  # persisted to checkpoint so best epoch is recoverable
     base_model.zero_grad()
     for epoch in range(1, max_epoch + 1):
         base_model.train()
-        losses = AverageMeter(['loss', 'acc', 'manhole_acc'])
+        losses = AverageMeter(["loss", "acc", "manhole_acc"])
         epoch_start = time.time()
+
+        plotted = False
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100, leave=False)
         for _, _, data in pbar:
@@ -184,14 +202,49 @@ def run_net(args, config):
                 logits = base_model(points_bcn, None)
             loss, acc, manhole_acc = base_model.module.get_loss_acc(logits, target)
 
+            # DEBUGGING viz
+            if not plotted:
+                # 1. Convert logits to hard class predictions (0, 1, etc.)
+                # Assumes shape is [Batch, Points, Classes] -> argmax along the class dimension (-1)
+                # print(f"SHAPE LOGITS: {logits.shape}") 2, N
+                preds_labels = logits.argmax(dim=1)
+                # print(f"SHAPE PREDS: {preds_labels.shape}")
+
+                # 2. Extract ONLY the first item in the batch [0], move to CPU, and convert to numpy
+                viz_points = (
+                    points[0].detach().cpu().numpy()
+                )  # Shape: [NumPoints, Coordinates]
+                viz_preds = preds_labels[0].detach().cpu().numpy()  # Shape: [NumPoints]
+                viz_target = target[0].detach().cpu().numpy()  # Shape: [NumPoints]
+
+                # print(f"viz_preds SHAPE: {viz_preds.shape}")
+
+                # 3. Pass clean numpy arrays to your function
+                save_pred_visualization(
+                    input_points=viz_points,
+                    pred=viz_preds,
+                    target=viz_target,
+                    save_path=f"./debugging/Example_Prediction_{epoch}.png",
+                    title="Prediction",
+                )
+                plotted = True
+
             loss.backward()
             if grad_clip is not None:
-                torch.nn.utils.clip_grad_norm_(base_model.parameters(), grad_clip, norm_type=2)
+                torch.nn.utils.clip_grad_norm_(
+                    base_model.parameters(), grad_clip, norm_type=2
+                )
             optimizer.step()
             base_model.zero_grad()
 
             losses.update([loss.item(), acc.item(), manhole_acc.item()])
-            pbar.set_postfix({'loss': f'{losses.avg(0):.4f}', 'acc': f'{losses.avg(1):.1f}%', 'manhole_acc': f'{losses.avg(2):.1f}%'})
+            pbar.set_postfix(
+                {
+                    "loss": f"{losses.avg(0):.4f}",
+                    "acc": f"{losses.avg(1):.1f}%",
+                    "manhole_acc": f"{losses.avg(2):.1f}%",
+                }
+            )
 
         if isinstance(scheduler, list):
             for item in scheduler:
@@ -201,84 +254,183 @@ def run_net(args, config):
 
         epoch_time = time.time() - epoch_start
         epoch_times.append(epoch_time)
-        lr = optimizer.param_groups[0]['lr']
+        lr = optimizer.param_groups[0]["lr"]
 
         # Validation
         if epoch % args.val_freq == 0:
             metrics = _validate(
-                base_model, val_loader, metrics_tracker,
+                base_model,
+                val_loader,
+                metrics_tracker,
                 num_obj_classes=num_obj_classes,
                 use_cls_label=use_cls_label,
             )
-            is_best = metrics_tracker.update(epoch, metrics, selection_metric=selection_metric)
+            is_best = metrics_tracker.update(
+                epoch, metrics, selection_metric=selection_metric
+            )
             metrics_tracker.update_history(
                 epoch,
-                train_loss=losses.avg(0), 
+                train_loss=losses.avg(0),
                 train_acc=losses.avg(1),
                 train_manhole_acc=losses.avg(2),
-                val_loss=metrics['loss'],
-                val_acc=metrics['accuracy'],
-                val_manhole_acc=metrics['manhole_accuracy'],
-                val_class_miou=metrics['class_miou'],
-                val_instance_miou=metrics['instance_miou'],
+                val_loss=metrics["loss"],
+                val_acc=metrics["accuracy"],
+                val_manhole_acc=metrics["manhole_accuracy"],
+                val_class_miou=metrics["class_miou"],
+                val_instance_miou=metrics["instance_miou"],
             )
 
-            tqdm.write(fmt.format_seg_epoch_line(
-                epoch, losses.avg(0), losses.avg(1),
-                metrics['accuracy'], metrics['instance_miou'],
-                metrics['class_miou'], metrics_tracker.best_instance_miou,
-                lr, epoch_time, is_best,
-            ))
+            tqdm.write(
+                fmt.format_seg_epoch_line(
+                    epoch,
+                    losses.avg(0),
+                    losses.avg(1),
+                    metrics["accuracy"],
+                    metrics["instance_miou"],
+                    metrics["class_miou"],
+                    metrics_tracker.best_instance_miou,
+                    lr,
+                    epoch_time,
+                    is_best,
+                )
+            )
 
             if is_best:
                 epochs_without_improvement = 0
                 best_metrics_dict = {
-                    'epoch': epoch,
-                    'instance_miou': metrics['instance_miou'],
-                    'class_miou': metrics['class_miou'],
-                    'accuracy': metrics['accuracy'],
+                    "epoch": epoch,
+                    "instance_miou": metrics["instance_miou"],
+                    "class_miou": metrics["class_miou"],
+                    "accuracy": metrics["accuracy"],
                 }
                 builder.save_checkpoint(
-                    base_model, optimizer, epoch,
-                    metrics=best_metrics_dict, best_metrics=best_metrics_dict,
-                    prefix='ckpt-best-seg', args=args, logger=None,
+                    base_model,
+                    optimizer,
+                    epoch,
+                    metrics=best_metrics_dict,
+                    best_metrics=best_metrics_dict,
+                    prefix="ckpt-best-seg",
+                    args=args,
+                    logger=None,
                 )
             else:
                 epochs_without_improvement += 1
 
             builder.save_checkpoint(
-                base_model, optimizer, epoch,
-                metrics=metrics, best_metrics=best_metrics_dict,
-                prefix='ckpt-last-seg', args=args, logger=None,
+                base_model,
+                optimizer,
+                epoch,
+                metrics=metrics,
+                best_metrics=best_metrics_dict,
+                prefix="ckpt-last-seg",
+                args=args,
+                logger=None,
             )
 
-            if early_stopping_patience > 0 and epochs_without_improvement >= early_stopping_patience:
-                fmt.print_early_stopping(epoch, selection_metric, early_stopping_patience, logger=logger)
+            if (
+                early_stopping_patience > 0
+                and epochs_without_improvement >= early_stopping_patience
+            ):
+                fmt.print_early_stopping(
+                    epoch, selection_metric, early_stopping_patience, logger=logger
+                )
                 break
 
     # Final summary
     fmt.print_seg_summary(metrics_tracker, logger=logger)
 
     # Save outputs
-    model_name = config.model.get('base_model', config.model.NAME)
-    history_path = os.path.join(args.experiment_path, f'seg_history_{model_name}.csv')
+    model_name = config.model.get("base_model", config.model.NAME)
+    history_path = os.path.join(args.experiment_path, f"seg_history_{model_name}.csv")
     metrics_tracker.save_history_csv(history_path)
-    summary_path = os.path.join(args.experiment_path, 'seg_summary.csv')
+    summary_path = os.path.join(args.experiment_path, "seg_summary.csv")
     metrics_tracker.save_summary_csv(
-        summary_path, model_name=model_name,
+        summary_path,
+        model_name=model_name,
         dataset=config.dataset.train._base_.NAME,
     )
 
-    fmt.print_saved_outputs(args.experiment_path, [
-        f'seg_history_{model_name}.csv',
-        'seg_summary.csv',
-    ], logger=logger)
+    fmt.print_saved_outputs(
+        args.experiment_path,
+        [
+            f"seg_history_{model_name}.csv",
+            "seg_summary.csv",
+        ],
+        logger=logger,
+    )
     fmt.print_training_complete(metrics_tracker.best_instance_miou, logger=logger)
 
     return {
-        'metrics_tracker': metrics_tracker,
-        'model_name': model_name,
-        'trainable_params': trainable_params,
-        'total_params': total_params,
-        'avg_epoch_time': sum(epoch_times) / len(epoch_times) if epoch_times else 0.0,
+        "metrics_tracker": metrics_tracker,
+        "model_name": model_name,
+        "trainable_params": trainable_params,
+        "total_params": total_params,
+        "avg_epoch_time": sum(epoch_times) / len(epoch_times) if epoch_times else 0.0,
     }
+
+
+def save_pred_visualization(
+    input_points, pred, target=None, save_path=None, title="Prediction"
+):
+    """
+    Plots predictions side-by-side with ground truth targets (if provided).
+    """
+    try:
+        plt.style.use("seaborn-v0_8-whitegrid")
+    except OSError:
+        plt.style.use("ggplot")
+
+    # If target is provided, we make 2 subplots. If not, just 1.
+    ncols = 2 if target is not None else 1
+    fig, ax = plt.subplots(figsize=(7 * ncols, 7), ncols=ncols)
+
+    # If there is only 1 column, ax isn't a list, so we force it into a list for easy indexing
+    if ncols == 1:
+        ax = [ax]
+
+    # --- Panel 1: Predictions ---
+    unique_preds = np.unique(pred)
+    for cur_label in unique_preds:
+        mask = pred == cur_label
+        ax[0].scatter(
+            input_points[mask][:, 0],
+            input_points[mask][:, 1],
+            s=15,
+            label=f"Pred Class {cur_label}",
+            alpha=0.8,
+        )
+    ax[0].set_title(title)
+    ax[0].set_aspect("equal")
+    ax[0].legend()
+
+    # --- Panel 2: Ground Truth Targets (Optional) ---
+    if target is not None:
+        unique_targets = np.unique(target)
+        for cur_label in unique_targets:
+            mask = target == cur_label
+            ax[1].scatter(
+                input_points[mask][:, 0],
+                input_points[mask][:, 1],
+                s=15,
+                label=f"True Class {cur_label}",
+                alpha=0.8,
+            )
+        ax[1].set_title("Ground Truth (Target)")
+        ax[1].set_aspect("equal")
+        ax[1].legend()
+
+    # Console Diagnostics
+    print("Num points:", len(input_points))
+    if 1 in unique_preds:
+        print("Pred Pos ratio (Class 1):", np.mean(pred == 1))
+    if target is not None and 1 in unique_targets:
+        print("True Pos ratio (Class 1):", np.mean(target == 1))
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300)
+    else:
+        plt.show()
+
+    plt.close(fig)

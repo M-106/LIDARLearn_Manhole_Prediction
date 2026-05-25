@@ -64,3 +64,9 @@ PPT-main/
 segmentation_for_pointm2ae/
 segmentation_for_ppt/
 dgcnn_segementation.py
+debugging_single_sample_overfitting_bce_dice_loss/
+debugging_single_sample_overfitting/
+debugging/
+debugging_*/
+
+
