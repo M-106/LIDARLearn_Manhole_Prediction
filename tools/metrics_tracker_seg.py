@@ -59,8 +59,10 @@ class SegMetricsTracker:
         # History
         self.history = {
             'epoch': [], 'train_loss': [], 'train_acc': [], 'train_manhole_acc': [],
+            'train_precision': [], 'train_recall': [],
             'val_loss': [], 'val_acc': [], 'val_manhole_acc': [], 
             'val_class_miou': [], 'val_instance_miou': [],
+            'val_precision': [], 'val_recall': [],
         }
 
     # ------------------------------------------------------------------
@@ -186,6 +188,9 @@ class SegMetricsTracker:
             if accumulator['manhole_seen'] > 0 else 0.0
         )
 
+        manhole_precision = accumulator['tp'][1] / (accumulator['tp'][1] + accumulator['fp'][1])
+        manhole_recall = accumulator['tp'][1] / (accumulator['tp'][1] + accumulator['fn'][1])
+
         if self.seg_classes_map is None:
             # ── Semantic seg: global TP/FP/FN ──────────────────────────────
             tp = accumulator['tp']
@@ -207,6 +212,8 @@ class SegMetricsTracker:
                 'instance_miou': miou * 100.0,
                 'class_miou': miou * 100.0,
                 'per_category_iou': {k: v * 100.0 for k, v in per_cat.items()},
+                'precision': manhole_precision,
+                'recall': manhole_recall
             }
         else:
             # ── Part seg: per-shape IoU average ────────────────────────────
@@ -223,6 +230,8 @@ class SegMetricsTracker:
                 'instance_miou': instance_miou * 100.0,
                 'class_miou': class_miou * 100.0,
                 'per_category_iou': {k: v * 100.0 for k, v in per_cat.items()},
+                'precision': manhole_precision,
+                'recall': manhole_recall
             }
 
     # ------------------------------------------------------------------
@@ -249,19 +258,27 @@ class SegMetricsTracker:
                        train_loss=0.0,
                        train_acc=0.0,
                        train_manhole_acc=0.0,
+                       train_precision=0.0,
+                       train_recall=0.0,
                        val_loss=0.0,
                        val_acc=0.0,
                        val_manhole_acc=0.0,
                        val_class_miou=0.0,
-                       val_instance_miou=0.0):
+                       val_instance_miou=0.0,
+                       val_precision=0.0,
+                       val_recall=0.0):
         self.history['epoch'].append(epoch)
         self.history['train_loss'].append(train_loss)
         self.history['train_acc'].append(train_acc)
         self.history['train_manhole_acc'].append(train_manhole_acc)
+        self.history['train_precision'].append(train_precision)
+        self.history['train_recall'].append(train_recall)
 
         self.history['val_loss'].append(val_loss)
         self.history['val_acc'].append(val_acc)
         self.history['val_manhole_acc'].append(val_manhole_acc)
+        self.history['val_precision'].append(val_precision)
+        self.history['val_recall'].append(val_recall)
 
         self.history['val_class_miou'].append(val_class_miou)
         self.history['val_instance_miou'].append(val_instance_miou)

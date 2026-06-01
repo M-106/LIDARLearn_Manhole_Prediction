@@ -182,14 +182,16 @@ def run_net(args, config):
     best_metrics_dict = {}  # persisted to checkpoint so best epoch is recoverable
     base_model.zero_grad()
     for epoch in range(1, max_epoch + 1):
+        train_dataset.epoch_update(epoch)
+
         base_model.train()
-        losses = AverageMeter(["loss", "acc", "manhole_acc"])
+        losses = AverageMeter(["loss", "acc", "manhole_acc", "precision", "recall"])
         epoch_start = time.time()
 
-        plotted = False
+        plot_counter = 0
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100, leave=False)
-        for _, _, data in pbar:
+        for sample_idx, (_, _, data) in enumerate(pbar):
             points, cls_label, target = _unpack_data(data, use_cls_label)
             points = points.float().cuda()
             target = target.long().cuda()
@@ -200,10 +202,10 @@ def run_net(args, config):
                 logits = base_model(points_bcn, cls_onehot)
             else:
                 logits = base_model(points_bcn, None)
-            loss, acc, manhole_acc = base_model.module.get_loss_acc(logits, target)
+            loss, acc, manhole_acc, precision, recall = base_model.module.get_loss_acc(logits, target, train_dataset.debug_log_path if plot_counter < 3 else None)
 
             # DEBUGGING viz
-            if not plotted:
+            if plot_counter < 3:
                 # 1. Convert logits to hard class predictions (0, 1, etc.)
                 # Assumes shape is [Batch, Points, Classes] -> argmax along the class dimension (-1)
                 # print(f"SHAPE LOGITS: {logits.shape}") 2, N
@@ -224,10 +226,11 @@ def run_net(args, config):
                     input_points=viz_points,
                     pred=viz_preds,
                     target=viz_target,
-                    save_path=f"./debugging/Example_Prediction_{epoch}.png",
+                    save_path=f"{train_dataset.debug_out_path}/Sample_{sample_idx}_Prediction_Epoch_{epoch:03}.png",
                     title="Prediction",
                 )
-                plotted = True
+
+                plot_counter += 1
 
             loss.backward()
             if grad_clip is not None:
@@ -237,12 +240,14 @@ def run_net(args, config):
             optimizer.step()
             base_model.zero_grad()
 
-            losses.update([loss.item(), acc.item(), manhole_acc.item()])
+            losses.update([loss.item(), acc.item(), manhole_acc.item(), precision.item(), recall.item()])
             pbar.set_postfix(
                 {
                     "loss": f"{losses.avg(0):.4f}",
                     "acc": f"{losses.avg(1):.1f}%",
                     "manhole_acc": f"{losses.avg(2):.1f}%",
+                    "precision": f"{losses.avg(3):.4f}",
+                    "recall": f"{losses.avg(4):.4f}"
                 }
             )
 
@@ -273,11 +278,15 @@ def run_net(args, config):
                 train_loss=losses.avg(0),
                 train_acc=losses.avg(1),
                 train_manhole_acc=losses.avg(2),
+                train_precision=losses.avg(3),
+                train_recall=losses.avg(4),
                 val_loss=metrics["loss"],
                 val_acc=metrics["accuracy"],
                 val_manhole_acc=metrics["manhole_accuracy"],
                 val_class_miou=metrics["class_miou"],
                 val_instance_miou=metrics["instance_miou"],
+                val_precision=metrics["precision"],
+                val_recall=metrics["recall"]
             )
 
             tqdm.write(
@@ -419,12 +428,12 @@ def save_pred_visualization(
         ax[1].set_aspect("equal")
         ax[1].legend()
 
-    # Console Diagnostics
-    print("Num points:", len(input_points))
-    if 1 in unique_preds:
-        print("Pred Pos ratio (Class 1):", np.mean(pred == 1))
-    if target is not None and 1 in unique_targets:
-        print("True Pos ratio (Class 1):", np.mean(target == 1))
+    # # Console Diagnostics
+    # print("Num points:", len(input_points))
+    # if 1 in unique_preds:
+    #     print("Pred Pos ratio (Class 1):", np.mean(pred == 1))
+    # if target is not None and 1 in unique_targets:
+    #     print("True Pos ratio (Class 1):", np.mean(target == 1))
 
     plt.tight_layout()
 

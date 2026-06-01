@@ -1,0 +1,11 @@
+NAME: MergedUrban3D
+URBAN_DATA_PATH: /data/whu3d-dataset-wo-test-label
+SUD_DATA_PATH: /data/SUD-ROAD
+DATA_PATH: /data
+NUM_CLASSES: 2   # manhole, not manhole
+N_POINTS: 200000 # 4096   # amount of points per pointcloud -> ok?
+USE_NORMALS: FALSE
+block_size: 5
+exp_name: manhole_seg_merged_data_ptv3_nl_loss_0_05_dropout  # ADJUST ME!!!
+
+

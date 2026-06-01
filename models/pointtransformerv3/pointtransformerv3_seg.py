@@ -235,4 +235,5 @@ class PointTransformerV3_Seg(BaseSegModel):
 
         # Convert packed -> batched [B, seg_classes, N]
         out = out.reshape(B, N, -1).permute(0, 2, 1).contiguous()
-        return F.log_softmax(out, dim=1)
+        # return F.log_softmax(out, dim=1)
+        return out

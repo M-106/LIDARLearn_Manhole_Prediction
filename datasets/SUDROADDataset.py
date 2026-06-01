@@ -8,6 +8,11 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from sklearn.cluster import DBSCAN
+import matplotlib.pyplot as plt
+
+from .build import DATASETS
+
 from .utils import (load_h5_as_numpy,
                     create_sliding_window_patch,
                     random_hex_color,
@@ -15,15 +20,11 @@ from .utils import (load_h5_as_numpy,
                     save_patch_visualization,
                     extract_samples,
                     normalize_features)
-from .build import DATASETS
-
-
-
 
 
 
 @DATASETS.register_module()
-class WHUUrban3DDataset(Dataset):
+class SUDROADDataset(Dataset):
     """
     Note: This is an changed version of the
     dataset implemented in https://github.com/M-106/MCR-Lab/blob/main/src/mcrlab/point_cloud/data.py
@@ -49,44 +50,17 @@ class WHUUrban3DDataset(Dataset):
         self.test_area = int(getattr(config, "test_area", 5))
         self.feature_mode = str(getattr(config, "feature_mode", "xyz_i"))
 
+        self.transform = None
+
         self.epoch = 0
         self.transform = None
 
         print(f"Got partition: {self.partition}")
 
         # train normally include: '0404' but added to val, so that it have at least one
-        self.train_ids = [
-            "8018",
-            "4938",
-            "0414",
-            "2002",
-            "0444",
-            "1046",
-            "5642",
-            "4333",
-            "4629",
-            "0424",
-            "2421",
-            "0947",
-            "0434",
-            "2022",
-            "2719",
-            "2810",
-            "8048",
-            "2423",
-            "2522",
-            "8008",
-            "0502",
-            "6017",
-            "3918",
-            "2422",
-            "2322",
-            "3405",
-            "2323",
-            "8038",
-        ]
-        self.val_ids = ["0404", "6027", "3648"]
-        self.test_ids = ["0940", "2447", "6037", "2321", "8028", "5627", "2521"]
+        self.train_ids = ['8', '10', '1', '11', '3', '4', '6', '5', '7']
+        self.val_ids = ['0']
+        self.test_ids = ['2', '9']
 
         if preprocessed:
             self.train_ids = ["preprocessed_patch_" + x for x in self.train_ids]
@@ -146,7 +120,7 @@ class WHUUrban3DDataset(Dataset):
             with open(self.debug_log_path, "w") as file_:
                 file_.write(f"Logging from '{self.debug_out_path}'")
 
-            self.original_point_cloud_paths = self.point_cloud_paths
+            s self.original_point_cloud_paths = self.point_cloud_paths
             # self.point_cloud_paths_8_manholes = extract_samples(self.point_cloud_paths, amount=8)
             # self.point_cloud_paths_16_manholes = extract_samples(self.point_cloud_paths, amount=16)
             # self.point_cloud_paths_32_manholes = extract_samples(self.point_cloud_paths, amount=32)
@@ -199,15 +173,14 @@ class WHUUrban3DDataset(Dataset):
             features = features[sample_idx]
             labels = labels[sample_idx]
 
-        # if self.partition == "train" and idx < 3 and self.is_primary_dataset:
+        # if self.partition == "train"  and idx < 3 and self.is_primary_dataset:
         #     save_patch_visualization(
         #         features,
         #         labels,
-        #         save_path=f"{self.debug_out_path}/patch_viz_{scene_name}.png",  # _epoch_{self.epoch}
+        #         save_path=f"{self.debug_out_path}/patch_viz_{scene_name}.png",
         #         title="Patch Investigation",
         #     )
 
-        # normalize
         features = normalize_features(features, debug_prints=False)
 
         # convert to torch
@@ -218,7 +191,7 @@ class WHUUrban3DDataset(Dataset):
         # features[:, -1] = features[:, -1] - features[:, -1].mean(0)
         # features[:, -1] = features[:, -1] / features[:, -1].abs().max() # normalize
 
-        return "WHUUrban3D", scene_name, (features, labels)
+        return "SUDROAD", scene_name, (features, labels)
 
     def epoch_update(self, epoch):
         self.epoch = epoch

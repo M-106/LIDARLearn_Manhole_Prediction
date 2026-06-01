@@ -62,6 +62,95 @@ def tversky_loss(pred, target, alpha=0.3, beta=0.7, smooth=1.0, ignore_index=255
     return 1 - (TP + smooth) / (TP + alpha * FP + beta * FN + smooth)
 
 
+
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=2.0, pos_weight=50.0, ignore_index=255):
+        super().__init__()
+        self.gamma = gamma
+        self.ignore_index = ignore_index
+
+        self.register_buffer(
+            "pos_weight",
+            torch.tensor(pos_weight, dtype=torch.float32)
+        )
+
+    def forward(self, pred, target):
+        target = target.float()
+
+        # create mask FIRST
+        mask = target != self.ignore_index
+
+        # clamp target to valid range for computation
+        target_valid = target.clone()
+        target_valid[~mask] = 0  # avoid 255 breaking math
+
+        # BCE (no reduction)
+        bce_loss = F.binary_cross_entropy_with_logits(
+            pred,
+            target_valid,
+            pos_weight=self.pos_weight,
+            reduction='none'
+        )
+
+        # probabilities
+        probs = torch.sigmoid(pred).clamp(1e-6, 1 - 1e-6)
+
+        # p_t
+        p_t = probs * target_valid + (1 - probs) * (1 - target_valid)
+
+        # focal term
+        focal_weight = (1 - p_t) ** self.gamma
+
+        loss = focal_weight * bce_loss
+
+        # apply mask AFTER safe computation
+        loss = loss * mask.float()
+
+        return loss.sum() / mask.sum().clamp(min=1)
+
+
+
+def log_precision_recall(pred, probs, target, ignore_index=255, path=None):
+    
+    # logits = pred
+    # probs = torch.sigmoid(logits)
+
+    probs_flat = probs.reshape(-1)
+    target_flat = target.reshape(-1)
+
+    # masking the ignore index
+    mask = target_flat != ignore_index
+    prob_masked = probs_flat[mask]
+    target_masked = target_flat[mask].float()
+
+    pred_binary = (prob_masked > 0.5).float()
+
+    TP = (pred_binary * target_masked).sum()
+    FP = ((1 - target_masked) * pred_binary).sum()
+    FN = (target_masked * (1 - pred_binary)).sum()
+    
+    eps = 1e-8
+    precision = TP / (TP + FP + eps)
+    recall = TP / (TP + FN + eps)
+
+    if path is not None:
+        labels = target[0]
+        save_str = ""
+        # ratio = labels[labels == 1].sum() / len(labels)
+        ratio = (labels == 1).float().mean()
+        save_str += f"Manhole ratio: {ratio:.4%}"
+        save_str += f"\nUnique labels im Batch: {torch.unique(target)}"
+        save_str += f"\nLabel shape: {labels.shape}, dtype: {target.dtype}"
+        save_str += f"\nProbs range: {probs.min():.3f} - {probs.max():.3f}"
+        save_str += f"\nPred range: {pred.min():.3f} - {pred.max():.3f}"
+        save_str += f"\n\nPrecision: {precision.item()}, Recall: {recall.item()}"
+        with open(path, "a") as file_:
+            file_.write(save_str)
+
+    return precision, recall
+
+
+
 class BaseSegModel(nn.Module, ABC):
     """
     Abstract base class for point cloud segmentation models.
@@ -98,7 +187,7 @@ class BaseSegModel(nn.Module, ABC):
         """
         pass
 
-    def get_loss_acc(self, pred: torch.Tensor, gt: torch.Tensor) -> tuple:
+    def get_loss_acc(self, pred: torch.Tensor, gt: torch.Tensor, log_path=None) -> tuple:
         """
         Args:
             pred: [B, seg_classes, N] log-probabilities (post log_softmax)
@@ -109,28 +198,54 @@ class BaseSegModel(nn.Module, ABC):
         B, C, N = pred.shape
         # NLL loss expects [B, C, N] with class dim at position 1
 
-        weights = torch.tensor([1.0, 1.0], device=pred.device, dtype=torch.float)
+        weights = torch.tensor([1.0, 1.5], device=pred.device, dtype=torch.float)
 
         # print(f"pred shape before loss: {pred.shape} -> will be changed to {pred[1].shape}")
-        loss = F.nll_loss(pred, gt.long(), weight=weights, ignore_index=255)
+        # loss = F.nll_loss(pred, gt.long(), weight=weights, ignore_index=255)
         # loss = bce_dice_loss(pred=pred[:, 1, :],  # just use probability that it is a manhole
         #                      target=gt.long(),
         #                      lambda_=1.0,
         #                      ignore_index=255)
+        # loss = tversky_loss(pred[:, 1, :], gt.long(), alpha=0.3, beta=0.7, smooth=1.0)
         # loss = tversky_loss(pred[:, 1, :], gt.long(), alpha=0.05, beta=0.95, smooth=1.0)
 
-        pred_choice = pred.argmax(dim=1)  # [B, N]
+        # loss = F.nll_loss(pred, gt.long(), weight=weights, ignore_index=255) + \
+        #        tversky_loss(pred[:, 1, :], gt.long(), alpha=0.05, beta=0.95, smooth=1.0) + \
+        #        bce_dice_loss(pred=pred[:, 1, :], target=gt.long(), lambda_=1.0, ignore_index=255)
+
+        # # Pred should be Log-Softmax for NLL
+        # loss_1 = F.nll_loss(pred, gt.long(), weight=weights, ignore_index=255)
+
+        # # Convert to probabilities for Tversky (take Exp if using Log-Softmax)
+        # probs = torch.exp(pred[:, 1, :]) 
+        # loss_2 = tversky_loss(probs, gt.long(), alpha=0.3, beta=0.7, smooth=1.0)
+
+        # loss = loss_1 + loss_2
+
+        ratio = 0.015
+        pos_weight = (1 - ratio) / ratio  # about 65
+        logits_manhole = pred[:, 1, :]
+        loss = FocalLoss(gamma=2.0, pos_weight=pos_weight, ignore_index=255)(logits_manhole, gt.long())
+
+        # debugging
+        probs = torch.sigmoid(logits_manhole)
+        pred_choice_focal = (probs > 0.5).long()
+        # pred_choice_argmax = pred.argmax(dim=1) 
+        precision, recall = log_precision_recall(logits_manhole, probs, gt.float(), ignore_index=255, path=log_path)
+
+        pred_choice = pred_choice_focal  # [B, N]
+        
         acc = (pred_choice == gt).float().mean() * 100.0
-        mask = gt == 1
+        mask = (gt == 1) & (gt != 255)
         if mask.sum() > 0:
             manhole_acc = (pred_choice[mask] == gt[mask]).float().mean() * 100.0
         else:
             manhole_acc = torch.tensor(
-                100.0, device=pred.device
+                0.0, device=pred.device
             )  # if no manhole is in the batch
             # FIXME: 100 or 0 ?
 
-        return loss, acc, manhole_acc
+        return loss, acc, manhole_acc, precision, recall
 
     def get_num_parameters(self, trainable_only: bool = True) -> int:
         if trainable_only:

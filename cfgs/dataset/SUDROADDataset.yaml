@@ -1,10 +1,10 @@
-NAME: WHUUrban3DDataset
-DATA_PATH: /data/whu3d-dataset-wo-test-label # /mnt/OtherSSD/data/whu3d-dataset-wo-test-label
+NAME: SUDROADDataset
+DATA_PATH: /data/SUD-ROAD # /mnt/OtherSSD/data/whu3d-dataset-wo-test-label
 NUM_CLASSES: 2   # manhole, not manhole
 N_POINTS: 200000 # 4096   # amount of points per pointcloud -> ok?
 USE_NORMALS: FALSE
 block_size: 5
-exp_name: manhole_seg_ptv3_tryout_dual_circulum_learning_focus_loss_updated_post_process  # ADJUST ME!!!
+exp_name: manhole_seg_ptv3_nl_loss  # ADJUST ME!!!
 # TRAIN:
 #   TRANSFORMS:
 #   - NAME: PointShuffle
