@@ -203,6 +203,8 @@ class PointTransformerV3_Seg(BaseSegModel):
             in_channels=channels,
             num_classes=self.seg_classes,
             enable_flash=config.get('enable_flash', False),
+            enc_patch_size=(32, 32, 32, 32, 32),
+            dec_patch_size=(32, 32, 32, 32),
         )
 
     def forward(self, pts, cls_label=None):

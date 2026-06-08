@@ -4,6 +4,7 @@ NUM_CLASSES: 2   # manhole, not manhole
 N_POINTS: 200000 # 4096   # amount of points per pointcloud -> ok?
 USE_NORMALS: FALSE
 block_size: 5
+intensity_droput: 0.5
 exp_name: manhole_seg_ptv3_nl_loss  # ADJUST ME!!!
 # TRAIN:
 #   TRANSFORMS:

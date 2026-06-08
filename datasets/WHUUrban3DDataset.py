@@ -14,7 +14,8 @@ from .utils import (load_h5_as_numpy,
                     save_manhole_visualization,
                     save_patch_visualization,
                     extract_samples,
-                    normalize_features)
+                    normalize_features,
+                    augment_point_cloud)
 from .build import DATASETS
 
 
@@ -40,14 +41,19 @@ class WHUUrban3DDataset(Dataset):
         if preprocessed:
             self.path = os.path.join(self.path, "preprocessed")
         # print(self.path)
-        os.system("echo 'Data Dir Test'")
-        os.system(f"ls {self.path}")
+        # os.system("echo 'Data Dir Test'")
+        # os.system(f"ls {self.path}")
         self.num_point = int(getattr(config, "N_POINTS", 4096))
         self.block_size = float(getattr(config, "block_size", 5.0))
         self.sample_rate = float(getattr(config, "sample_rate", 1.0))
         self.partition = config.subset  # 'train'|'val'|'test'
         self.test_area = int(getattr(config, "test_area", 5))
         self.feature_mode = str(getattr(config, "feature_mode", "xyz_i"))
+        self.intensity_dropout = float(getattr(config, "intensity_dropout", 0.4))
+
+        if not hasattr(config, "intensity_dropout"):
+            print("[WARNING] Config does not have 'intensity_dropout' attribute!")
+        # raise RuntimeError("[WARNING] Config does not have 'intensity_dropout' attribute!")
 
         self.epoch = 0
         self.transform = None
@@ -134,7 +140,15 @@ class WHUUrban3DDataset(Dataset):
 
             self.debug_out_path = f"./debugging/debugging_{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{config.exp_name}"
 
-            # shutil.rmtree(f"./debugging/debugging_2026_05_27_22_16_manhole_seg_ptv3_nl_loss")
+            # for file in os.listdir("."):
+            #     if file.startswith("debugging_"):
+            #         shutil.rmtree(os.path.join(".", file))
+            # raise ValueError("DEBUGGING REMOVAL")
+
+            # shutil.rmtree(f"./debugging/")
+            # shutil.rmtree(f"./experiments/")
+            # os.makedirs(f"./debugging/", exist_ok=True)
+            # os.makedirs(f"./experiments/", exist_ok=True)
             # raise ValueError("DEBUGGING REMOVAL")
             # ls ./src/LIDARLearn_Manhole_Prediction/debugging
 
@@ -168,6 +182,10 @@ class WHUUrban3DDataset(Dataset):
         features, labels = load_h5_as_numpy(
             cur_pc_path, instance_segmentation=False
         )
+
+        # augmentation
+        if self.partition == "train":
+            features, labels = augment_point_cloud(features, labels, intensity_dropout=self.intensity_dropout)
 
         # preprocessing, augmentation
         if self.transform:

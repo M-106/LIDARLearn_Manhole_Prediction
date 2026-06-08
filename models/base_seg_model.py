@@ -198,10 +198,11 @@ class BaseSegModel(nn.Module, ABC):
         B, C, N = pred.shape
         # NLL loss expects [B, C, N] with class dim at position 1
 
-        weights = torch.tensor([1.0, 1.5], device=pred.device, dtype=torch.float)
+        weights = torch.tensor([1.0, 50.0], device=pred.device, dtype=torch.float)
 
         # print(f"pred shape before loss: {pred.shape} -> will be changed to {pred[1].shape}")
-        # loss = F.nll_loss(pred, gt.long(), weight=weights, ignore_index=255)
+        # ==> CrossEntropyLoss => 
+        loss = F.nll_loss(F.log_softmax(pred, dim=1), gt.long(), weight=weights, ignore_index=255)
         # loss = bce_dice_loss(pred=pred[:, 1, :],  # just use probability that it is a manhole
         #                      target=gt.long(),
         #                      lambda_=1.0,
@@ -222,10 +223,12 @@ class BaseSegModel(nn.Module, ABC):
 
         # loss = loss_1 + loss_2
 
-        ratio = 0.015
-        pos_weight = (1 - ratio) / ratio  # about 65
+        # ratio = 0.015
+        # pos_weight = (1 - ratio) / ratio  # about 65
         logits_manhole = pred[:, 1, :]
-        loss = FocalLoss(gamma=2.0, pos_weight=pos_weight, ignore_index=255)(logits_manhole, gt.long())
+        # loss_focal = FocalLoss(gamma=2.0, pos_weight=pos_weight, ignore_index=255)(logits_manhole, gt.long())
+        # loss_iou = tversky_loss(logits_manhole, gt.long(), alpha=0.3, beta=0.7, smooth=1.0)
+        # loss = loss_focal + loss_iou
 
         # debugging
         probs = torch.sigmoid(logits_manhole)

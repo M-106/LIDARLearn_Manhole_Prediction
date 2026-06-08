@@ -19,7 +19,8 @@ from .utils import (load_h5_as_numpy,
                     save_manhole_visualization,
                     save_patch_visualization,
                     extract_samples,
-                    normalize_features)
+                    normalize_features,
+                    augment_point_cloud)
 
 
 
@@ -49,6 +50,10 @@ class SUDROADDataset(Dataset):
         self.partition = config.subset  # 'train'|'val'|'test'
         self.test_area = int(getattr(config, "test_area", 5))
         self.feature_mode = str(getattr(config, "feature_mode", "xyz_i"))
+        self.intensity_dropout = float(getattr(config, "intensity_dropout", 0.5))
+
+        if not hasattr(config, "intensity_dropout"):
+            print("[WARNING] Config does not have 'intensity_dropout' attribute!")
 
         self.transform = None
 
@@ -142,6 +147,10 @@ class SUDROADDataset(Dataset):
         features, labels = load_h5_as_numpy(
             cur_pc_path, instance_segmentation=False
         )
+
+        # augmentation
+        if self.partition == "train":
+            features, labels = augment_point_cloud(features, labels, intensity_dropout=self.intensity_dropout)
 
         # preprocessing, augmentation
         if self.transform:

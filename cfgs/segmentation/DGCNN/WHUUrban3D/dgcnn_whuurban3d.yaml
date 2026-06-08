@@ -1,0 +1,46 @@
+dataset:
+  train:
+    _base_: cfgs/dataset/WHUUrban3DDataset.yaml
+    others:
+      bs: 2
+      subset: train
+      K_FOLDS: 1
+  val:
+    _base_: cfgs/dataset/WHUUrban3DDataset.yaml
+    others:
+      bs: 2
+      subset: val
+      K_FOLDS: 1
+
+grad_norm_clip: 10
+max_epoch: 200
+npoints: 16384 # 16384 # 32768  # 65536  # 200000  # try maybe less points
+step_per_update: 1
+
+model:
+  NAME: PointCentricSeg
+  adapter_name: DGCNN
+  seg_classes: 2
+  num_obj_classes: 1
+  use_cls_label: False
+  dropout: 0.5
+  backbone:
+    NAME: DGCNN
+    channels_input: 4
+    k: 40
+    k1: 40
+    emb_dims: 1024
+    dropout: 0.5
+    num_classes: 2       # dummy; backbone's classification head is unused
+    label_smoothing: 0.0
+
+optimizer:
+  type: AdamW
+  kwargs:
+    lr: 0.0003
+    weight_decay: 0.0001
+
+scheduler:
+  type: CosLR
+  kwargs:
+    initial_epochs: 10

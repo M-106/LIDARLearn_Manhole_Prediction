@@ -224,6 +224,10 @@ def main():
                 pred_np = pred[i].cpu().numpy()              # [N]
                 xyz = pts_np[:, :3]
 
+                # FIXME -> for Debugging
+                if np.sum(gt_np == 1) < 50:
+                    continue
+
                 # RGB for .npy (if available)
                 if pts_np.shape[1] >= 6:
                     rgb = pts_np[:, 3:6]

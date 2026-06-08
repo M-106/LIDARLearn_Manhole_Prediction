@@ -44,14 +44,15 @@ def _unpack_data(data, use_cls_label):
     return points, cls_label, target
 
 
-def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label):
+def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label, debug_out_path=None, epoch=0):
     model.eval()
     acc = metrics_tracker.new_accumulator()
     total_loss = 0.0
     total_batches = 0
+    plot_counter = 0
 
     with torch.no_grad():
-        for _, _, data in dataloader:
+        for sample_idx, (_, _, data) in enumerate(dataloader):
             points, cls_label, target = _unpack_data(data, use_cls_label)
             points = points.float().cuda()
             target = target.long().cuda()
@@ -65,10 +66,39 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
                 logits = model(points_bcn, None)
                 cls_np = np.zeros(points.shape[0], dtype=np.int32)
 
+            if plot_counter < 3 and debug_out_path is not None and epoch % 2 == 0:
+                batch_idx = None
+                for idx_ in range(target.shape[0]):
+                    if  (target[idx_] == 1).sum().item() > 200:
+                        batch_idx = idx_
+                        break
+
+                if batch_idx is not None:
+                    # probs = torch.sigmoid(logits[:, 1, :])
+                    # preds_labels = (probs > 0.5).long()
+                    preds_labels = logits.argmax(dim=1)
+
+                    viz_points = (
+                        points[batch_idx].detach().cpu().numpy()
+                    )  # Shape: [NumPoints, Coordinates]
+                    viz_preds = preds_labels[batch_idx].detach().cpu().numpy()  # Shape: [NumPoints]
+                    viz_target = target[batch_idx].detach().cpu().numpy()  # Shape: [NumPoints]
+
+                    save_pred_visualization(
+                        input_points=viz_points,
+                        pred=viz_preds,
+                        target=viz_target,
+                        save_path=f"{debug_out_path}/Validation_Sample_{sample_idx}_Prediction_Epoch_{epoch:03}.png",
+                        title="Prediction",
+                    )
+
+                    plot_counter += 1
+
             # compute loss
             weights = torch.tensor(
-                [1.0, 100.0], device=logits.device, dtype=torch.float
+                [1.0, 50.0], device=logits.device, dtype=torch.float
             )
+            logits = F.log_softmax(logits, dim=1)
             loss = F.nll_loss(logits, target.long(), weight=weights)
 
             total_loss += loss.item()
@@ -205,12 +235,18 @@ def run_net(args, config):
             loss, acc, manhole_acc, precision, recall = base_model.module.get_loss_acc(logits, target, train_dataset.debug_log_path if plot_counter < 3 else None)
 
             # DEBUGGING viz
-            if plot_counter < 3:
+            if plot_counter < 1 and epoch % 2 == 0:
                 # 1. Convert logits to hard class predictions (0, 1, etc.)
                 # Assumes shape is [Batch, Points, Classes] -> argmax along the class dimension (-1)
                 # print(f"SHAPE LOGITS: {logits.shape}") 2, N
+                # probs = torch.sigmoid(logits[:, 1, :])
+                #preds_labels = (probs > 0.5).long()
+                # print(f"preds_labels = (probs > 0.5).long(): {preds_labels.shape}")
+                # preds_labels = preds_labels.view(-1)
+                # print(f"preds_labels = preds_labels.view(-1): {preds_labels.shape}")
                 preds_labels = logits.argmax(dim=1)
-                # print(f"SHAPE PREDS: {preds_labels.shape}")
+                # print(f"preds_labels = logits.argmax(dim=1): {preds_labels.shape}")
+
 
                 # 2. Extract ONLY the first item in the batch [0], move to CPU, and convert to numpy
                 viz_points = (
@@ -269,6 +305,8 @@ def run_net(args, config):
                 metrics_tracker,
                 num_obj_classes=num_obj_classes,
                 use_cls_label=use_cls_label,
+                debug_out_path=train_dataset.debug_out_path,
+                epoch=epoch
             )
             is_best = metrics_tracker.update(
                 epoch, metrics, selection_metric=selection_metric
@@ -390,14 +428,12 @@ def save_pred_visualization(
         plt.style.use("ggplot")
 
     # If target is provided, we make 2 subplots. If not, just 1.
-    ncols = 2 if target is not None else 1
-    fig, ax = plt.subplots(figsize=(7 * ncols, 7), ncols=ncols)
+    if target is None:
+        return
 
-    # If there is only 1 column, ax isn't a list, so we force it into a list for easy indexing
-    if ncols == 1:
-        ax = [ax]
+    fig, ax = plt.subplots(figsize=(7 * 3, 7), ncols=3)
 
-    # --- Panel 1: Predictions ---
+    # Image 1: Predictions
     unique_preds = np.unique(pred)
     for cur_label in unique_preds:
         mask = pred == cur_label
@@ -412,7 +448,7 @@ def save_pred_visualization(
     ax[0].set_aspect("equal")
     ax[0].legend()
 
-    # --- Panel 2: Ground Truth Targets (Optional) ---
+    # Image 2: Ground Truth Targets
     if target is not None:
         unique_targets = np.unique(target)
         for cur_label in unique_targets:
@@ -424,9 +460,24 @@ def save_pred_visualization(
                 label=f"True Class {cur_label}",
                 alpha=0.8,
             )
-        ax[1].set_title("Ground Truth (Target)")
-        ax[1].set_aspect("equal")
         ax[1].legend()
+        ax[1].set_title("Ground Truth (Target)")
+    else:
+        ax[1].text(0.5, 0.5, "No Target Provided", ha='center')
+    ax[1].set_aspect("equal")
+    
+
+    # Image 3 - Intensity
+    ax[2].scatter(
+            input_points[:, 0],
+            input_points[:, 1],
+            s=8,
+            c=input_points[:, 3],
+            cmap='viridis',
+            alpha=1.0,
+        )
+    ax[2].set_title("Input (Intensity)")
+    ax[2].set_aspect("equal")
 
     # # Console Diagnostics
     # print("Num points:", len(input_points))

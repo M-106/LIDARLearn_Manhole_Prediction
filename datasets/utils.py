@@ -288,6 +288,62 @@ def normalize_features(features, debug_prints=False):
 
 
 
+def augment_point_cloud(features, labels, intensity_dropout=0.0):
+    """
+    Standard augmentations for manhole detection.
+    expected features: (N, 4) -> [x, y, z, intensity]
+    """
+    # 1. Random Rotation around the Z-axis (Vertical)
+    # Manholes are circular, so 360-degree rotation is perfect.
+    if np.random.random() > 0.8:
+        theta = np.random.uniform(0, 2 * np.pi)
+        rotation_matrix = np.array([
+            [np.cos(theta), -np.sin(theta), 0],
+            [np.sin(theta),  np.cos(theta), 0],
+            [0,              0,             1]
+        ])
+        features[:, :3] = features[:, :3] @ rotation_matrix.T
+
+    # 2. Random Scaling
+    # Simulates different sensor distances/resolutions
+    if np.random.random() > 0.8:
+        scale = np.random.uniform(0.9, 1.1)
+        features[:, :3] *= scale
+
+    # # 3. Random Jitter (Noise)
+    # # Simulates sensor inaccuracy. Standard dev of 0.01m is typical.
+    # if np.random.random() > 0.8:
+    #     noise = np.random.normal(0, 0.005, size=(features.shape[0], 3))
+    #     features[:, :3] += noise
+
+    # 4. Random Flip
+    if np.random.random() > 0.9:
+        features[:, 0] = -features[:, 0]  # Flip X
+    if np.random.random() > 0.9:
+        features[:, 1] = -features[:, 1]  # Flip Y
+
+    # 5. Random Intensity Shifting
+    if np.random.random() > 0.9:
+        shift = np.random.uniform(-0.1, 0.1)
+        features[:, 3] = np.clip(features[:, 3] + shift, 0.0, 1.0)
+
+    # 6. Random Intensity Dropout
+    if np.random.random() < intensity_dropout:
+        # num_points = len(features)
+        # num_drop = int(num_points * intensity_dropout)
+        # if num_drop > 0:
+        #     drop_idx = np.random.choice(num_points, size=num_drop, replace=False)
+        #     features[drop_idx, 3] = 0.0
+        features[:, 3] = 0.0
+
+    # 7. Random Intensity Noise
+    # if np.random.random() > 0.5:
+    #     intensity_noise = np.random.normal(0, 0.02, size=(features.shape[0],))
+    #     features[:, 3] = np.clip(features[:, 3] + intensity_noise, 0.0, 1.0)
+
+    return features, labels
+
+
 
 
 
