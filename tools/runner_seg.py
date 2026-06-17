@@ -431,44 +431,10 @@ def save_pred_visualization(
     if target is None:
         return
 
-    fig, ax = plt.subplots(figsize=(7 * 3, 7), ncols=3)
+    fig, ax = plt.subplots(figsize=(7 * 4, 7), ncols=4)
 
-    # Image 1: Predictions
-    unique_preds = np.unique(pred)
-    for cur_label in unique_preds:
-        mask = pred == cur_label
-        ax[0].scatter(
-            input_points[mask][:, 0],
-            input_points[mask][:, 1],
-            s=15,
-            label=f"Pred Class {cur_label}",
-            alpha=0.8,
-        )
-    ax[0].set_title(title)
-    ax[0].set_aspect("equal")
-    ax[0].legend()
-
-    # Image 2: Ground Truth Targets
-    if target is not None:
-        unique_targets = np.unique(target)
-        for cur_label in unique_targets:
-            mask = target == cur_label
-            ax[1].scatter(
-                input_points[mask][:, 0],
-                input_points[mask][:, 1],
-                s=15,
-                label=f"True Class {cur_label}",
-                alpha=0.8,
-            )
-        ax[1].legend()
-        ax[1].set_title("Ground Truth (Target)")
-    else:
-        ax[1].text(0.5, 0.5, "No Target Provided", ha='center')
-    ax[1].set_aspect("equal")
-    
-
-    # Image 3 - Intensity
-    ax[2].scatter(
+    # Image 1 - Intensity
+    ax[0].scatter(
             input_points[:, 0],
             input_points[:, 1],
             s=8,
@@ -476,8 +442,55 @@ def save_pred_visualization(
             cmap='viridis',
             alpha=1.0,
         )
-    ax[2].set_title("Input (Intensity)")
+    ax[0].set_title("Input (Intensity)")
+    ax[0].set_aspect("equal")
+
+    # Image 2 - Z
+    ax[1].scatter(
+            input_points[:, 0],
+            input_points[:, 1],
+            s=8,
+            c=input_points[:, 2],
+            cmap='viridis',
+            alpha=1.0,
+        )
+    ax[1].set_title("Input (Z)")
+    ax[1].set_aspect("equal")
+
+    # Image 3: Ground Truth Targets
+    if target is not None:
+        unique_targets = np.unique(target)
+        for cur_label in unique_targets:
+            mask = target == cur_label
+            ax[2].scatter(
+                input_points[mask][:, 0],
+                input_points[mask][:, 1],
+                s=15,
+                label=f"True Class {cur_label}",
+                alpha=0.8,
+            )
+        ax[2].legend()
+        ax[2].set_title("Ground Truth (Target)")
+    else:
+        ax[2].text(0.5, 0.5, "No Target Provided", ha='center')
     ax[2].set_aspect("equal")
+    
+    # Image 4: Predictions
+    unique_preds = np.unique(pred)
+    for cur_label in unique_preds:
+        mask = pred == cur_label
+        ax[3].scatter(
+            input_points[mask][:, 0],
+            input_points[mask][:, 1],
+            s=15,
+            label=f"Pred Class {cur_label}",
+            alpha=0.8,
+        )
+    ax[3].set_title(title)
+    ax[3].set_aspect("equal")
+    ax[3].legend()
+
+   
 
     # # Console Diagnostics
     # print("Num points:", len(input_points))

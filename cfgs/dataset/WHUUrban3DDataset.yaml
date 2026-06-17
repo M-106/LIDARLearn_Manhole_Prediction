@@ -4,8 +4,8 @@ NUM_CLASSES: 2   # manhole, not manhole
 N_POINTS: 200000 # 16384 # 32768  # 65536  # 200000 # 4096   # amount of points per pointcloud -> ok?
 USE_NORMALS: FALSE
 block_size: 5
-intensity_dropout: 0.4
-exp_name: manhole_seg_ptv3_tryout_nl_loss_updated_post_process_smaller_patching_with_intensity_droput  # ADJUST ME!!!
+intensity_dropout: 0.2
+exp_name: manhole_seg_pointnet2_first_try  # ADJUST ME!!!
 # TRAIN:
 #   TRANSFORMS:
 #   - NAME: PointShuffle

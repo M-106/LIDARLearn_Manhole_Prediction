@@ -49,7 +49,7 @@ class WHUUrban3DDataset(Dataset):
         self.partition = config.subset  # 'train'|'val'|'test'
         self.test_area = int(getattr(config, "test_area", 5))
         self.feature_mode = str(getattr(config, "feature_mode", "xyz_i"))
-        self.intensity_dropout = float(getattr(config, "intensity_dropout", 0.4))
+        self.intensity_dropout = float(getattr(config, "intensity_dropout", 0.2))
 
         if not hasattr(config, "intensity_dropout"):
             print("[WARNING] Config does not have 'intensity_dropout' attribute!")
@@ -230,6 +230,8 @@ class WHUUrban3DDataset(Dataset):
 
         # convert to torch
         features = torch.from_numpy(features).float()  # (N, 4)
+        # # FIXME
+        # features = features[:, :3]
         labels = torch.from_numpy(labels).long()  # (N,)
 
         # normalize
@@ -252,10 +254,13 @@ class WHUUrban3DDataset(Dataset):
         # elif self.partition == "train" and self.epoch >= 200:
         #     self.point_cloud_paths = self.original_point_cloud_paths
 
-        if epoch < 200:
-            self.point_cloud_paths = self.point_cloud_paths_manholes_only
-        else:
-            self.point_cloud_paths = self.original_point_cloud_paths
+        self.point_cloud_paths = self.point_cloud_paths_manholes_only
+
+        # FIXME
+        # if epoch < 200:
+        #     self.point_cloud_paths = self.point_cloud_paths_manholes_only
+        # else:
+        #     self.point_cloud_paths = self.original_point_cloud_paths
 
 
 

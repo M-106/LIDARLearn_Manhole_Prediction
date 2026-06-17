@@ -30,13 +30,15 @@ class PointNet2_MSG_Seg(BaseSegModel):
         channels = config.get('channels', 3)
         dropout = config.get('dropout', 0.5)
 
+        # print(f"DEBUGGING: config: {config}, used channels: {channels}")
+
         # ── Encoder (Set Abstraction) ──
         self.SA_modules = nn.ModuleList()
 
         # First SA: use_xyz=True adds 3 xyz channels internally.
         # When input has no extra features (xyz-only), c_in=0 so MLP input = 0+3 = 3.
         # When input has extra features (e.g. normals), c_in = extra_channels.
-        c_in = 0  # use_xyz=True handles xyz channels
+        c_in = channels - 3  # channels  # use_xyz=True handles xyz channels
         self.SA_modules.append(
             PointnetSAModuleMSG(
                 npoint=1024,
@@ -90,7 +92,7 @@ class PointNet2_MSG_Seg(BaseSegModel):
         # FP[1] (i=-3): interp FP_out(256ch) + l_feat[1](96ch) = 352 -> 128
         # FP[0] (i=-4): interp FP_out(128ch) + l_feat[0](None) = 128 -> 128
         self.FP_modules = nn.ModuleList()
-        self.FP_modules.append(PointnetFPModule(mlp=[128, 128, 128]))                  # shallowest
+        self.FP_modules.append(PointnetFPModule(mlp=[128 + c_in, 128, 128]))                  # shallowest
         self.FP_modules.append(PointnetFPModule(mlp=[256 + c_out_0, 256, 128]))        # 352 -> 128
         self.FP_modules.append(PointnetFPModule(mlp=[512 + c_out_1, 256, 256]))        # 768 -> 256
         self.FP_modules.append(PointnetFPModule(mlp=[c_out_3 + c_out_2, 512, 512]))   # deepest: 1536 -> 512
@@ -153,4 +155,4 @@ class PointNet2_MSG_Seg(BaseSegModel):
             per_point = torch.cat([per_point, cls_feat], dim=1)
 
         logits = self.head(per_point)  # [B, seg_classes, N]
-        return F.log_softmax(logits, dim=1)
+        return logits  # F.log_softmax(logits, dim=1)
