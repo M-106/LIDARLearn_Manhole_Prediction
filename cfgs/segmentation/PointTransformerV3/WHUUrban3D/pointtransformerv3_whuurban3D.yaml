@@ -14,6 +14,13 @@ dataset:
       subset: val
       test_area: 5
       K_FOLDS: 1
+  test:
+    _base_: cfgs/dataset/WHUUrban3DDataset.yaml
+    others:
+      bs: 8
+      subset: test
+      test_area: 5
+      K_FOLDS: 1
 
 grad_norm_clip: 10
 max_epoch: 100  # FIXME -> only for debuggign 100
@@ -27,16 +34,24 @@ model:
   seg_classes: 2
   num_obj_classes: 1
   use_cls_label: False
-  dropout: 0.3
+  dropout: 0.5
   enable_flash: false
 
 optimizer:
   type: AdamW
+  param_name: 'block'
+  param_lr: 0.0002
   kwargs:
-    lr: 0.005  # 0.0003
-    weight_decay: 0.0001
+    lr: 0.009  # 0.0003
+    weight_decay: 0.005
 
 scheduler:
   type: CosLR  # LambdaLR  # CosLR  # StepLR
+  max_lr: [0.006, 0.0006]  # head lr higher, backbone lower # IMPORTANT: this config param don't be used I think, but its ok
+  pct_start: 0.05
+  anneal_strategy: 'cos'
+  div_factor: 10.0
+  final_div_factor: 100.0
+
   kwargs:
     initial_epochs: 3

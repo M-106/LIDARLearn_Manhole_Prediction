@@ -1,11 +1,15 @@
+import os
+import shutil
+import random
+from datetime import datetime
 from copy import deepcopy
 
 from torch.utils.data import Dataset
 
-from .build import DATASETS
-
 from .WHUUrban3DDataset import WHUUrban3DDataset
 from .SUDROADDataset import SUDROADDataset
+
+from .build import DATASETS
 
 
 
@@ -13,6 +17,15 @@ from .SUDROADDataset import SUDROADDataset
 class MergedUrbanSUDDataset(Dataset):
     def __init__(self, config):
         super().__init__()
+
+        self.num_point = int(getattr(config, "N_POINTS", 4096))
+        self.block_size = float(getattr(config, "block_size", 5.0))
+        self.sample_rate = float(getattr(config, "sample_rate", 1.0))
+        self.partition = config.subset  # 'train'|'val'|'test'
+        self.test_area = int(getattr(config, "test_area", 5))
+        self.feature_mode = str(getattr(config, "feature_mode", "xyzi"))
+        self.intensity_dropout = float(getattr(config, "intensity_dropout", 0.5))
+
         self.urban_config = deepcopy(config)
         self.urban_config.DATA_PATH = config.URBAN_DATA_PATH
         self.urban3d = WHUUrban3DDataset(self.urban_config, is_primary_dataset=False)
@@ -46,15 +59,7 @@ class MergedUrbanSUDDataset(Dataset):
             with open(self.debug_log_path, "w") as file_:
                 file_.write(f"Logging from '{self.debug_out_path}'")
 
-            self.original_point_cloud_paths = self.point_cloud_paths
-            # self.point_cloud_paths_8_manholes = extract_samples(self.point_cloud_paths, amount=8)
-            # self.point_cloud_paths_16_manholes = extract_samples(self.point_cloud_paths, amount=16)
-            # self.point_cloud_paths_32_manholes = extract_samples(self.point_cloud_paths, amount=32)
-            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1)
-
-            self.point_cloud_paths = self.point_cloud_paths_manholes_only
-            # self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=3)
-            print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
+            print(f"Updated to {len(self.urban3d) + len(self.sud)} point clouds.")
 
     def __len__(self):
         return len(self.urban3d) + len(self.sud)

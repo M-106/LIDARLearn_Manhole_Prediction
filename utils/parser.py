@@ -103,6 +103,15 @@ def get_args():
         help='Training runner to use: runner_finetune (val metrics), '
              'runner_finetune_test (test set final metrics)')
 
+    
+    parser.add_argument(
+        '--distributed',
+        action='store_true',
+        default=False,
+        help='Use distributed training'
+    )
+
+
     args = parser.parse_args()
 
     if args.resume and args.ckpts is not None:

@@ -1,6 +1,6 @@
 dataset:
   train:
-    _base_: cfgs/dataset/WHUUrban3DDataset.yaml
+    _base_: cfgs/dataset/MergedUrbanSUDDataset.yaml
     others:
       bs: 8
       subset: train
@@ -8,7 +8,7 @@ dataset:
       feature_mode: xyzi
       K_FOLDS: 1
   val:
-    _base_: cfgs/dataset/WHUUrban3DDataset.yaml
+    _base_: cfgs/dataset/MergedUrbanSUDDataset.yaml
     others:
       bs: 8
       subset: val

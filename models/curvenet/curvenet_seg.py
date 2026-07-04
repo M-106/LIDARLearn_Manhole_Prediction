@@ -197,4 +197,4 @@ class CurveNet_Seg(BaseSegModel):
 
         label = cls_label if self.use_cls_label else None
         logits = self.backbone(pts, label)  # [B, seg_classes, N]
-        return F.log_softmax(logits, dim=1)
+        return logits   # F.log_softmax(logits, dim=1)

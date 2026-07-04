@@ -38,12 +38,12 @@ class SUDROADDataset(Dataset):
         self.is_primary_dataset = is_primary_dataset
 
         preprocessed = True
-        self.path = os.path.join(config.DATA_PATH, "mls", "h5")
+        self.path = config.DATA_PATH
         if preprocessed:
             self.path = os.path.join(self.path, "preprocessed")
         # print(self.path)
-        os.system("echo 'Data Dir Test'")
-        os.system(f"ls {self.path}")
+        # os.system("echo 'Data Dir Test'")
+        # os.system(f"ls {self.path}")
         self.num_point = int(getattr(config, "N_POINTS", 4096))
         self.block_size = float(getattr(config, "block_size", 5.0))
         self.sample_rate = float(getattr(config, "sample_rate", 1.0))
@@ -54,8 +54,6 @@ class SUDROADDataset(Dataset):
 
         if not hasattr(config, "intensity_dropout"):
             print("[WARNING] Config does not have 'intensity_dropout' attribute!")
-
-        self.transform = None
 
         self.epoch = 0
         self.transform = None
@@ -125,7 +123,9 @@ class SUDROADDataset(Dataset):
             with open(self.debug_log_path, "w") as file_:
                 file_.write(f"Logging from '{self.debug_out_path}'")
 
-            s self.original_point_cloud_paths = self.point_cloud_paths
+
+        if self.partition == "train":
+            self.original_point_cloud_paths = self.point_cloud_paths
             # self.point_cloud_paths_8_manholes = extract_samples(self.point_cloud_paths, amount=8)
             # self.point_cloud_paths_16_manholes = extract_samples(self.point_cloud_paths, amount=16)
             # self.point_cloud_paths_32_manholes = extract_samples(self.point_cloud_paths, amount=32)
@@ -216,10 +216,12 @@ class SUDROADDataset(Dataset):
         # elif self.partition == "train" and self.epoch >= 200:
         #     self.point_cloud_paths = self.original_point_cloud_paths
 
-        if epoch < 200:
-            self.point_cloud_paths = self.point_cloud_paths_manholes_only
-        else:
-            self.point_cloud_paths = self.original_point_cloud_paths
+        self.point_cloud_paths = self.point_cloud_paths_manholes_only
+
+        # if epoch < 200:
+        #     self.point_cloud_paths = self.point_cloud_paths_manholes_only
+        # else:
+        #     self.point_cloud_paths = self.original_point_cloud_paths
 
 
 

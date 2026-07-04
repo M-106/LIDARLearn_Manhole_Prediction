@@ -128,4 +128,4 @@ class PointSCNet_Seg(BaseSegModel):
 
         out = torch.cat(parts, dim=1)
         logits = self.seg_head(out)
-        return F.log_softmax(logits, dim=1)
+        return logits    # F.log_softmax(logits, dim=1)

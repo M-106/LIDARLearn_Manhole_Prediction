@@ -12,6 +12,38 @@ from abc import ABC, abstractmethod
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import segmentation_models_pytorch as smp
+
+
+class PTv3Loss(nn.Module):
+    def __init__(self, ce_weight=1.0, lovasz_weight=1.0):
+        super().__init__()
+        self.ce_weight = ce_weight
+        self.lovasz_weight = lovasz_weight
+        self.ce = nn.CrossEntropyLoss(ignore_index=255)
+        # self.lovasz = smp.losses.LovaszLoss(mode="binary", from_logits=True)  # binary, multiclass
+        # self.lovasz = smp.losses.LovaszHingeLoss()
+        self.lovasz = smp.losses.LovaszLoss(mode="multiclass", from_logits=True, ignore_index=255)
+
+    def forward(self, preds, gts, weights=None):
+        loss_ce = self.ce(preds, gts.long())
+        # [B, CLASS, N] -> [B, N]
+        
+        # logits are needed, so no softmax or sigmoid
+        loss_lovasz = self.lovasz(preds, gts.long())
+        # loss_lovasz = self.lovasz(
+        #     preds[:, 1, :].contiguous(), 
+        #     gts.long().contiguous()
+        # )
+        # else we could use softmax or sigmoid
+        # softmax uses both classes and generated a combined probability of Class 1 in respective of all classes
+        # and sigmoid just creates a probability of class 1 in respective of class 1 logits
+        # loss_lovasz = self.lovasz(F.log_softmax(preds, dim=1)[:, 1, :], gts.long())
+        # probs = torch.sigmoid(preds[:, 1, :])
+        # # pred_choice = (probs > 0.5).long()
+        # loss_lovasz = self.lovasz(probs, gts.long())
+        return (self.ce_weight * loss_ce) + \
+               (self.lovasz_weight * loss_lovasz)
 
 
 # Milletari et al. (2016) – "V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation" -> hat Dice Loss für 3D Segmentierung etabliert
@@ -120,6 +152,12 @@ def log_precision_recall(pred, probs, target, ignore_index=255, path=None):
 
     # masking the ignore index
     mask = target_flat != ignore_index
+
+    # print("probs_flat", probs_flat.shape, probs_flat.device)
+    # print("mask", mask.shape, mask.device, mask.dtype)
+    # print("target_flat", target_flat.shape)
+    # print("unique gt", torch.unique(target_flat))
+
     prob_masked = probs_flat[mask]
     target_masked = target_flat[mask].float()
 
@@ -198,11 +236,23 @@ class BaseSegModel(nn.Module, ABC):
         B, C, N = pred.shape
         # NLL loss expects [B, C, N] with class dim at position 1
 
-        weights = torch.tensor([1.0, 50.0], device=pred.device, dtype=torch.float)
+        # weights = torch.tensor([1.0, 50.0], device=pred.device, dtype=torch.float)
+        # num_background = (gt == 0).sum().float()
+        # num_manhole = (gt == 1).sum().float()
+        # epsilon = 1e-6
+        # weight_background = (num_background + num_manhole) / (2 * num_background + epsilon)
+        # weight_manhole = (num_background + num_manhole) / (2 * num_manhole + epsilon)
+        # weights = torch.tensor([weight_background, weight_manhole], device=pred.device, dtype=torch.float)
+        weights = torch.tensor([0.5, 10.0], device=pred.device, dtype=torch.float)
 
         # print(f"pred shape before loss: {pred.shape} -> will be changed to {pred[1].shape}")
         # ==> CrossEntropyLoss => 
-        loss = F.nll_loss(F.log_softmax(pred, dim=1), gt.long(), weight=weights, ignore_index=255)
+        # loss = F.nll_loss(F.log_softmax(pred, dim=1), gt.long(), weight=weights, ignore_index=255)
+        # numerical more stanle and a bit faster but very similiar
+        # loss = F.cross_entropy(pred, gt.long(), weight=weights, ignore_index=255)
+
+        loss = PTv3Loss(ce_weight=1.0, lovasz_weight=1.0)(preds=pred, gts=gt, weights=weights)
+
         # loss = bce_dice_loss(pred=pred[:, 1, :],  # just use probability that it is a manhole
         #                      target=gt.long(),
         #                      lambda_=1.0,

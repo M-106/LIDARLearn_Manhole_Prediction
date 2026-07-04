@@ -105,9 +105,12 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
             total_batches += 1
 
             # compute accuracy
-            pred_np = logits.detach().cpu().numpy()
-            target_np = target.detach().cpu().numpy()
-            metrics_tracker.evaluate_batch(pred_np, target_np, cls_np, acc)
+            with torch.no_grad():
+                pred_np = logits.detach().cpu().numpy()
+                target_np = target.detach().cpu().numpy()
+                xyz = points.detach().cpu().numpy()
+            
+                metrics_tracker.evaluate_batch(pred_np, target_np, cls_np, acc, xyz=xyz)
 
     metrics = metrics_tracker.finalize(acc)
 
@@ -219,6 +222,10 @@ def run_net(args, config):
         epoch_start = time.time()
 
         plot_counter = 0
+
+        print("\nDEBUGGING Check LR - Scheduler did overwrite them?")
+        for i, param_group in enumerate(optimizer.param_groups):
+            print(f"Group {i} LR: {param_group['lr']}")
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100, leave=False)
         for sample_idx, (_, _, data) in enumerate(pbar):

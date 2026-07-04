@@ -15,10 +15,10 @@ def load_h5_as_numpy(path, instance_segmentation=False):
         with h5py.File(path, "r") as file_:
             # extract data
             coordinates = file_["coords"][:]
-            instances = file_["instances"][:]
+            # instances = file_["instances"][:]
             intensities = file_["intensity"][:]
             semantics = file_["semantics"][:]
-            number_returns = file_["number_returns"][:]
+            # number_returns = file_["number_returns"][:]
 
         intensities = intensities.astype(np.float32)
         if intensities.max() > 1.0:

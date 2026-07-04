@@ -267,25 +267,44 @@ def _build_standard_optimizer(base_model, config):
     def add_weight_decay(model, weight_decay=1e-5, skip_list=()):
         decay = []
         no_decay = []
+        if config.model.NAME == "PointTransformerV3_Seg":
+            decay_low_lr = []
+            no_decay_low_lr = []
 
         for name, param in model.module.named_parameters():
             if not param.requires_grad:
                 continue
 
             if len(param.shape) == 1 or name.endswith(".bias") or 'token' in name or name in skip_list:
-                no_decay.append(param)
+                if config.model.NAME == "PointTransformerV3_Seg" and ("enc" in name or "dec" in name) and "block" in name:
+                    no_decay_low_lr.append(param)
+                else:
+                    no_decay.append(param)
             else:
-                decay.append(param)
+                if config.model.NAME == "PointTransformerV3_Seg" and ("enc" in name or "dec" in name) and "block" in name:
+                    decay_low_lr.append(param)
+                else:
+                    decay.append(param)
 
-        return [
-            {'params': no_decay, 'weight_decay': 0.},
-            {'params': decay, 'weight_decay': weight_decay}
-        ]
+        if config.model.NAME == "PointTransformerV3_Seg":
+            print(f"Setted {len(decay_low_lr)+ len(no_decay_low_lr)} notes on lower learning rate and {len(decay)+ len(no_decay)} on higher.")
+            return [
+                {'params': no_decay, 'weight_decay': 0., "lr":float(config.optimizer.kwargs.lr)},
+                {'params': decay, 'weight_decay': weight_decay, "lr":float(config.optimizer.kwargs.lr)},
+                {'params': no_decay_low_lr, 'weight_decay': 0., "lr":float(config.optimizer.param_lr)},
+                {'params': decay_low_lr, 'weight_decay': weight_decay, "lr":float(config.optimizer.param_lr)},
+            ]
+        else:
+            return [
+                {'params': no_decay, 'weight_decay': 0.},
+                {'params': decay, 'weight_decay': weight_decay}
+            ]
 
     param_groups = add_weight_decay(base_model, weight_decay=opti_config.kwargs.weight_decay)
 
     # Build optimizer
     if opti_config.type == 'AdamW':
+        # learnrate from config will not overright lr from param_groups
         optimizer = optim.AdamW(param_groups, **opti_config.kwargs)
     elif opti_config.type == 'Adam':
         optimizer = optim.Adam(param_groups, **opti_config.kwargs)

@@ -10,6 +10,8 @@ import datasets.ShapeNet55Dataset
 import datasets.ShapeNet55DatasetPretrain
 import datasets.S3DISDataset
 import datasets.WHUUrban3DDataset
+import datasets.SUDROADDataset
+import datasets.MergedUrbanSUDDataset
 # Import augmentation module
 from .augmentation import (
     get_train_transforms,
