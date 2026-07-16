@@ -171,6 +171,12 @@ class WHUUrban3DDataset(Dataset):
             self.point_cloud_paths = self.point_cloud_paths_manholes_only
             # self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=3)
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
+        elif self.partition == "test":
+            self.original_point_cloud_paths = self.point_cloud_paths
+            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1)
+
+            self.point_cloud_paths = self.point_cloud_paths_manholes_only
+            print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
 
     def __len__(self):
         return len(self.point_cloud_paths)

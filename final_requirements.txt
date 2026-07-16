@@ -17,7 +17,7 @@ attrs==26.1.0
 blinker==1.9.0
 cachetools==7.1.4
 certifi==2026.4.22
-cffi==2.0.0
+cffi==2.1.0
 # Editable install with no version control (chamfer_dist==2.0.0)
 -e /workspace/src/LIDARLearn_Manhole_Prediction/extensions/chamfer_dist
 charset-normalizer==3.4.7
@@ -38,7 +38,7 @@ decorator==5.3.1
 # Editable install with no version control (dela_cutils==1.0)
 -e /workspace/src/LIDARLearn_Manhole_Prediction/extensions/dela_cutils
 dill==0.3.8
-docker==7.1.0
+docker==7.2.0
 easydict==1.13
 einops==0.8.2
 evaluate==0.4.6
@@ -54,19 +54,19 @@ fsspec==2024.3.1
 ftfy==6.3.1
 gitdb==4.0.12
 GitPython==3.1.50
-google-auth==2.55.1
+google-auth==2.55.2
 graphene==3.4.3
 graphql-core==3.2.11
 graphql-relay==3.2.0
 greenlet==3.5.3
-grpcio==1.81.1
+grpcio==1.82.1
 gunicorn==26.0.0
 h11==0.16.0
 h5py==3.12.1
 hf-xet==1.5.1
-huey==3.1.1
+huey==3.2.1
 huggingface_hub==0.36.2
-hydra-core==1.3.3
+hydra-core==1.3.4
 idna==3.15
 ImageIO==2.37.3
 importlib_metadata==9.0.0
@@ -138,7 +138,7 @@ parso==0.8.7
 pexpect==4.9.0
 pillow==12.2.0
 platformdirs==4.10.0
-plotly==6.8.0
+plotly==6.9.0
 pluggy==1.6.0
 # Editable install with no version control (pointnet2_ops==3.0.0)
 -e /workspace/src/LIDARLearn_Manhole_Prediction/extensions/pointnet2_ops
@@ -157,7 +157,7 @@ ptyprocess==0.7.0
 pure_eval==0.2.3
 pyarrow==24.0.0
 pyarrow-hotfix==0.7
-pyasn1==0.6.3
+pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pycparser==3.0
 pydantic==2.13.4
@@ -213,11 +213,11 @@ transformers==4.41.0
 triton==3.0.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
-tzdata==2026.2
-ultralytics==8.4.87
+tzdata==2026.3
+ultralytics==8.4.91
 ultralytics-thop==2.0.20
 urllib3==2.7.0
-uvicorn==0.49.0
+uvicorn==0.51.0
 wcwidth==0.8.2
 Werkzeug==3.1.8
 widgetsnbextension==4.0.15

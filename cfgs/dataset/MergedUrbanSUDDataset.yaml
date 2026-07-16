@@ -7,6 +7,7 @@ N_POINTS: 200000 # 4096   # amount of points per pointcloud -> ok?
 USE_NORMALS: FALSE
 block_size: 5
 intensity_dropout: 0.5
-exp_name: manhole_seg_pointnet2_merged_dataset  # ADJUST ME!!!
+exp_name: metrics_test
+# manhole_seg_ptv3_final_optimizations_merged_dataset_smaller_stride  # ADJUST ME!!!
 
 

@@ -123,6 +123,8 @@ class SUDROADDataset(Dataset):
             with open(self.debug_log_path, "w") as file_:
                 file_.write(f"Logging from '{self.debug_out_path}'")
 
+        print(f"Got partition: {self.partition}")
+
 
         if self.partition == "train":
             self.original_point_cloud_paths = self.point_cloud_paths
@@ -133,6 +135,12 @@ class SUDROADDataset(Dataset):
 
             self.point_cloud_paths = self.point_cloud_paths_manholes_only
             # self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=3)
+            print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
+        elif self.partition == "test":
+            self.original_point_cloud_paths = self.point_cloud_paths
+            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1)
+
+            self.point_cloud_paths = self.point_cloud_paths_manholes_only
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
 
     def __len__(self):

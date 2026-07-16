@@ -22,15 +22,33 @@ class PTv3Loss(nn.Module):
         self.lovasz_weight = lovasz_weight
         self.ce = nn.CrossEntropyLoss(ignore_index=255)
         # self.lovasz = smp.losses.LovaszLoss(mode="binary", from_logits=True)  # binary, multiclass
-        # self.lovasz = smp.losses.LovaszHingeLoss()
-        self.lovasz = smp.losses.LovaszLoss(mode="multiclass", from_logits=True, ignore_index=255)
+        # self.lovasz = smp.losses.LovaszHingeLoss(ignore_index=255)
+        # self.lovasz = smp.losses.LovaszLoss(mode="multiclass", from_logits=True, ignore_index=255)
 
     def forward(self, preds, gts, weights=None):
         loss_ce = self.ce(preds, gts.long())
         # [B, CLASS, N] -> [B, N]
         
+        # print("Preds Shape", preds.shape)
+        # print("GTs Shape", gts.shape)
+        # print("Preds Dtype", preds.dtype)
+        # print("GTs DType", gts.dtype)
+        # print("Unique GTs", torch.unique(gts))
+        # Result:
+        # Preds Shape torch.Size([8, 2, 200000])
+        # GTs Shape torch.Size([8, 200000])
+        # Preds Dtype torch.float32
+        # GTs DType torch.int64
+        # Unique GTs tensor([0, 1], device='cuda:0')
+
+        # torch.sigmoid(preds[:,1] - preds[:,0])
+        # equals: torch.softmax(preds, dim=1)[:,1]
+        binary_logits = preds[:, 1] - preds[:, 0]
+        loss_dice = dice_loss(pred=binary_logits, target=gts.long(), apply_sigmoid=True, smooth=1.0, ignore_index=255)
+        # loss = lovasz_hinge(binary_logits, gts)
+
         # logits are needed, so no softmax or sigmoid
-        loss_lovasz = self.lovasz(preds, gts.long())
+        # loss_lovasz = self.lovasz(preds, gts.long())
         # loss_lovasz = self.lovasz(
         #     preds[:, 1, :].contiguous(), 
         #     gts.long().contiguous()
@@ -43,12 +61,14 @@ class PTv3Loss(nn.Module):
         # # pred_choice = (probs > 0.5).long()
         # loss_lovasz = self.lovasz(probs, gts.long())
         return (self.ce_weight * loss_ce) + \
-               (self.lovasz_weight * loss_lovasz)
+               (self.lovasz_weight * loss_dice)
 
 
 # Milletari et al. (2016) – "V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation" -> hat Dice Loss für 3D Segmentierung etabliert
-def dice_loss(pred, target, smooth=1.0, ignore_index=255):
-    pred_flat = torch.sigmoid(pred).reshape(-1)
+def dice_loss(pred, target, apply_sigmoid=True, smooth=1.0, ignore_index=255):
+    if apply_sigmoid:
+        pred = torch.sigmoid(pred)
+    pred_flat = pred.reshape(-1)
     target_flat = target.reshape(-1)
 
     # masking: only points with not 255 as label/value
@@ -237,13 +257,13 @@ class BaseSegModel(nn.Module, ABC):
         # NLL loss expects [B, C, N] with class dim at position 1
 
         # weights = torch.tensor([1.0, 50.0], device=pred.device, dtype=torch.float)
-        # num_background = (gt == 0).sum().float()
-        # num_manhole = (gt == 1).sum().float()
-        # epsilon = 1e-6
-        # weight_background = (num_background + num_manhole) / (2 * num_background + epsilon)
-        # weight_manhole = (num_background + num_manhole) / (2 * num_manhole + epsilon)
-        # weights = torch.tensor([weight_background, weight_manhole], device=pred.device, dtype=torch.float)
-        weights = torch.tensor([0.5, 10.0], device=pred.device, dtype=torch.float)
+        num_background = (gt == 0).sum().float()
+        num_manhole = (gt == 1).sum().float()
+        epsilon = 1e-6
+        weight_background = (num_background + num_manhole) / (2 * num_background + epsilon)
+        weight_manhole = (num_background + num_manhole) / (2 * num_manhole + epsilon)
+        weights = torch.tensor([weight_background, weight_manhole], device=pred.device, dtype=torch.float)
+        weights = torch.tensor(weights, device=pred.device, dtype=torch.float)
 
         # print(f"pred shape before loss: {pred.shape} -> will be changed to {pred[1].shape}")
         # ==> CrossEntropyLoss => 
@@ -276,9 +296,14 @@ class BaseSegModel(nn.Module, ABC):
         # ratio = 0.015
         # pos_weight = (1 - ratio) / ratio  # about 65
         logits_manhole = pred[:, 1, :]
-        # loss_focal = FocalLoss(gamma=2.0, pos_weight=pos_weight, ignore_index=255)(logits_manhole, gt.long())
+        num_pos = (gt == 1).sum().float().clamp(min=1)
+        num_neg = (gt == 0).sum().float()
+        pos_weight = num_neg / num_pos
+        loss_focal = FocalLoss(gamma=2.0, pos_weight=pos_weight, ignore_index=255)(logits_manhole, gt.long())
         # loss_iou = tversky_loss(logits_manhole, gt.long(), alpha=0.3, beta=0.7, smooth=1.0)
         # loss = loss_focal + loss_iou
+
+        loss = loss_focal + loss
 
         # debugging
         probs = torch.sigmoid(logits_manhole)

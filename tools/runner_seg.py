@@ -25,6 +25,7 @@ from utils import log_format as fmt
 from .metrics_tracker_seg import SegMetricsTracker
 
 
+
 def _to_one_hot(y, num_classes):
     if y.dim() == 2 and y.shape[1] == 1:
         y = y.squeeze(1)
@@ -98,15 +99,15 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
             weights = torch.tensor(
                 [1.0, 50.0], device=logits.device, dtype=torch.float
             )
-            logits = F.log_softmax(logits, dim=1)
-            loss = F.nll_loss(logits, target.long(), weight=weights)
+            log_logits = F.log_softmax(logits, dim=1)
+            loss = F.nll_loss(log_logits, target.long(), weight=weights)
 
             total_loss += loss.item()
             total_batches += 1
 
             # compute accuracy
             with torch.no_grad():
-                pred_np = logits.detach().cpu().numpy()
+                pred_np = torch.softmax(logits, dim=1).detach().cpu().numpy()
                 target_np = target.detach().cpu().numpy()
                 xyz = points.detach().cpu().numpy()
             
@@ -192,6 +193,11 @@ def run_net(args, config):
         num_seg_classes=num_seg_classes,
         seg_classes_map=seg_classes_map,
         category_names=category_names,
+        track_object_metrics=False,
+        cluster_eps=0.3,
+        cluster_min_samples=50,
+        confident_thresholds=np.arange(0.50, 0.95+0.05, 0.05),
+        iou_thresholds=np.arange(0.00, 0.95+0.05, 0.05)
     )
 
     max_epoch = config.max_epoch
@@ -223,9 +229,9 @@ def run_net(args, config):
 
         plot_counter = 0
 
-        print("\nDEBUGGING Check LR - Scheduler did overwrite them?")
-        for i, param_group in enumerate(optimizer.param_groups):
-            print(f"Group {i} LR: {param_group['lr']}")
+        # print("\nDEBUGGING Check LR - Scheduler did overwrite them?")
+        # for i, param_group in enumerate(optimizer.param_groups):
+        #     print(f"Group {i} LR: {param_group['lr']}")
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100, leave=False)
         for sample_idx, (_, _, data) in enumerate(pbar):
@@ -331,7 +337,11 @@ def run_net(args, config):
                 val_class_miou=metrics["class_miou"],
                 val_instance_miou=metrics["instance_miou"],
                 val_precision=metrics["precision"],
-                val_recall=metrics["recall"]
+                val_recall=metrics["recall"],
+                val_obj_precision=metrics["obj_precision"],
+                val_obj_recall=metrics["obj_recall"], 
+                val_obj_f1=metrics["obj_f1"], 
+                val_obj_mean_iou=metrics["obj_iou"]
             )
 
             tqdm.write(

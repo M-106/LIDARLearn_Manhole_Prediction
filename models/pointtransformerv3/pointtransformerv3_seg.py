@@ -36,7 +36,7 @@ class PointTransformerV3SegBase(PointModule):
         self,
         in_channels=3,
         num_classes=50,
-        order=("z", "z-trans"),
+        order=("z", "z-trans", "hilbert", "hilbert-trans"),  # order=("z", "z-trans"),
         stride=(2, 2, 2, 2),
         enc_depths=(2, 2, 2, 6, 2),
         enc_channels=(32, 64, 128, 256, 512),
@@ -203,8 +203,23 @@ class PointTransformerV3_Seg(BaseSegModel):
             in_channels=channels,
             num_classes=self.seg_classes,
             enable_flash=config.get('enable_flash', False),
-            # enc_patch_size=(32, 32, 32, 32, 32),
-            # dec_patch_size=(32, 32, 32, 32),
+            enc_patch_size=(16, 16, 16, 16, 16),
+            dec_patch_size=(16, 16, 16, 16),
+            # enc_patch_size=(48, 48, 48, 48, 48),
+            # dec_patch_size=(48, 48, 48, 48),
+            # enc_patch_size=(64, 64, 64, 64, 64),
+            # dec_patch_size=(64, 64, 64, 64),
+            # enc_patch_size=(256, 256, 256, 256, 256),
+            # dec_patch_size=(256, 256, 256, 256),
+            # enc_patch_size=(512, 512, 512, 512, 512),
+            # dec_patch_size=(512, 512, 512, 512),
+            # enc_patch_size=(1024, 1024, 1024, 1024, 1024),
+            # dec_patch_size=(1024, 1024, 1024, 1024),
+            # enc_channels=(32, 64, 128, 256, 512),
+            # dec_patch_size=(32, 64, 128, 256),
+            stride=(1, 1, 1, 1),  # stride=(4, 4, 4, 4),   # maybe biggest problem! Before: stride=(2, 2, 2, 2),
+            # maybe a tighter bottleneck is needed?
+            enc_depths=(2, 2, 2, 6, 2),  # depth of network/blocks
         )
 
     def forward(self, pts, cls_label=None):
@@ -221,7 +236,7 @@ class PointTransformerV3_Seg(BaseSegModel):
         batch = torch.arange(B, device=pts.device).repeat_interleave(N)
 
         # Grid coord for sparse conv (shift to non-negative, then quantize)
-        grid_size = 0.01
+        grid_size = 0.01  # 0.01
         coord_shifted = coord - coord.min(0)[0]
         grid_coord = torch.div(coord_shifted, grid_size, rounding_mode='trunc').int()
 

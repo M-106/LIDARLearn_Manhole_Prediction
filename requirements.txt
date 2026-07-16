@@ -38,3 +38,6 @@ seaborn==0.13.2
 
 # Preprocessing (HELIALS LAS ingestion)
 laspy
+
+# for fast clustering
+# cuml  # must compile so install via conda

@@ -2,7 +2,7 @@ dataset:
   train:
     _base_: cfgs/dataset/MergedUrbanSUDDataset.yaml
     others:
-      bs: 8
+      bs: 2
       subset: train
       test_area: 5
       feature_mode: xyzi
@@ -10,8 +10,15 @@ dataset:
   val:
     _base_: cfgs/dataset/MergedUrbanSUDDataset.yaml
     others:
-      bs: 8
+      bs: 2
       subset: val
+      test_area: 5
+      K_FOLDS: 1
+  test:
+    _base_: cfgs/dataset/MergedUrbanSUDDataset.yaml
+    others:
+      bs: 2
+      subset: test
       test_area: 5
       K_FOLDS: 1
 
@@ -27,19 +34,38 @@ model:
   seg_classes: 2
   num_obj_classes: 1
   use_cls_label: False
-  dropout: 0.05
+  dropout: 0.3
   enable_flash: false
+
+  order: ["z", "z-trans", "hilbert", "hilbert-trans"]   # War: nur ("z","z-trans")
+                                                          # Hilbert-Kurven bewahren 2D-Nähe besser
+                                                          # → kritisch für flache Objekte wie Manholes
+  enc_patch_size: [1024, 1024, 1024, 1024, 1024]        # War: 48 → KRITISCH!
+                                                          # Kleiner Patch = kein globaler Kontext
+                                                          # PTv3-Paper: 1024 ist Standard für outdoor
+  dec_patch_size: [1024, 1024, 1024, 1024]               # War: 48 → analog
+  drop_path: 0.3                                          # Beibehalten
+  enable_rpe: false
 
 optimizer:
   type: AdamW
+  param_name: 'block'
+  param_lr: 0.00009
   kwargs:
-    lr: 0.0003
-    weight_decay: 0.0001
+    lr: 0.0009  # 0.0003
+    weight_decay: 0.05
 
 scheduler:
-  type: CosLR
+  type: CosLR  # LambdaLR  # CosLR  # StepLR
+  max_lr: [0.0006, 0.00006]  # head lr higher, backbone lower # IMPORTANT: this config param don't be used I think, but its ok
+  pct_start: 0.05
+  anneal_strategy: 'cos'
+  div_factor: 10.0
+  final_div_factor: 100.0
+
   kwargs:
     initial_epochs: 10
+
 
 
 

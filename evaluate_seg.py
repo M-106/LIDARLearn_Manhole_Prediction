@@ -16,6 +16,8 @@ warnings.filterwarnings('ignore', message='.*weights_only=False.*')
 
 os.environ.setdefault('CUBLAS_WORKSPACE_CONFIG', ':4096:8')
 
+import numpy as np
+
 import torch
 import torch.nn as nn
 
@@ -38,7 +40,130 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+# helper
+def get_data_for_plot(obj_results, 
+                      fix_metric_name="iou_threshold", fix_value=0.5, 
+                      variable_metric_name="confident_threshold"):
+    """
+    Filtert die Daten so, dass eine Metrik fixiert bleibt (z.B. iou_threshold = 0.5)
+    und die andere Metrik über die X-Achse läuft.
+    """
+    # filter after threshols
+    if fix_metric_name == "confident_threshold":
+        key_idx = 0
+    elif fix_metric_name == "iou_threshold":
+        key_idx = 1
+    else:
+        raise ValueError(f"fix_metric_name must be in ['confident_threshold', 'iou_threshold'] but got: {fix_metric_name}")
 
+    filtered = {key: value for key, value in obj_results.items() if key[key_idx] == fix_value}
+
+    # convert to list
+    filtered_list = []
+    for key, value in filtered_dict.items():
+        item = value.copy() 
+        item.update({
+            'confident_threshold': key[0], 
+            'iou_threshold': key[1]
+        })
+        filtered_list.append(item)
+        # sort for clean line
+        
+    filtered_list.sort(key=lambda x: x[variable_metric_name])
+
+    x_thresholds = [r[variable_metric_name] for r in filtered_list]
+    
+    # directly calc here, we only have the micro aggregations here
+    AP = []
+    AR = []
+    AIOU = []
+
+    for r in filtered_list:
+        tp, fp, fn = r["tp"], r["fp"], r["fn"]
+        
+        precision = tp / max(tp + fp, 1)
+        recall = tp / max(tp + fn, 1)
+        iou = r["iou_sum"] / max(tp, 1) if tp > 0 else 0.0
+        
+        AP.append(precision)
+        AR.append(recall)
+        AIOU.append(iou)
+
+    return np.array(x_thresholds), np.array(AP), np.array(AR), np.array(AIOU)
+
+
+
+def plot_and_save(iou_thresholds, AR, AP, AIOU, title, xlabel, save_path):
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 7))
+
+    # plot values
+    ax.plot(iou_thresholds, AR, label='Avg Recall (AR)', marker='o', linewidth=2)
+    ax.plot(iou_thresholds, AP, label='Avg Precision (AP)', marker='s', linewidth=2)
+    # ax.plot(iou_thresholds, AF1, label='Avg F1-Score (AF1)', marker='^', linewidth=2)
+    if AIOU is not None:
+        ax.plot(iou_thresholds, AIOU, label='Avg Object IoU', marker='d', linewidth=2)
+
+    # set titles and labels
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=15)
+    ax.set_xlabel(xlabel, fontsize=12)
+    ax.set_ylabel('Metric Value', fontsize=12)
+
+    # set range for these metrics
+    ax.set_ylim(0, 1.05)
+
+    # add grid and legend
+    ax.grid(True, linestyle='--', alpha=0.6)
+    ax.legend(loc='lower left', fontsize=11)
+
+    # save and close fig
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)
+
+
+
+def plot_mean_average(object_results, root_save_path, save_name):
+    # 1. Confidence Curve (Fixed IoU Threshold on 0.5, variable Confident Threshold)
+    save_path1 = os.path.join(root_save_path, f"confidence_curve_{save_name}.png")
+    
+    conf_thresholds, AP, AR, AIOU = get_data_for_plot(
+        object_results, 
+        fix_metric_name="iou_threshold", 
+        fix_value=0.5, 
+        variable_metric_name="confident_threshold"
+    )
+
+    plot_and_save(
+        iou_thresholds=conf_thresholds, 
+        AR=AR, 
+        AP=AP, 
+        AIOU=AIOU,
+        title="Metrics vs. Confidence Threshold (Fix IoU @ 0.5)",
+        xlabel='Confidence Threshold',
+        save_path=save_path1
+    )
+
+    # 2. IoU Matching Sensitivity Curve (Fixed Confident Threshold on 0.5, variable IoU Threshold)
+    save_path2 = os.path.join(root_save_path, f"matching_sensitivity_curve_{save_name}.png")
+    
+    iou_thresholds, AP, AR, AIOU = get_data_for_plot(
+        object_results, 
+        fix_metric_name="confident_threshold", 
+        fix_value=0.5, 
+        variable_metric_name="iou_threshold"
+    )
+
+    plot_and_save(
+        iou_thresholds=iou_thresholds, 
+        AR=AR, 
+        AP=AP, 
+        AIOU=AIOU,
+        title="Metrics vs. IoU Matching Threshold (Fix Conf @ 0.5)",
+        xlabel='IoU Matching Threshold',
+        save_path=save_path2
+    )
+
+# main eval
 def evaluate(args, config):
 
     # Dataset
@@ -48,6 +173,9 @@ def evaluate(args, config):
     )
 
     test_dataset = test_loader.dataset
+
+    print(f"Test size: {len(test_dataset)}")
+    # raise ValueError("Debug Stop")
 
     num_seg_classes = getattr(
         test_dataset,
@@ -112,7 +240,9 @@ def evaluate(args, config):
         category_names=category_names,
         track_object_metrics=True, 
         cluster_eps=0.2,
-        cluster_min_samples=50
+        cluster_min_samples=50,
+        confident_thresholds=np.arange(0.50, 0.95+0.05, 0.05),
+        iou_thresholds=np.arange(0.00, 0.95+0.05, 0.05)
     )
 
     metrics = _validate(
@@ -131,8 +261,34 @@ def evaluate(args, config):
     for metric_name, value in metrics.items():
         # remove prefix 'test_' or 'eval_'
         clean_name = metric_name.replace("test_", "").replace("eval_", "")
-        line = f"{clean_name:<30}: {value:.4f}" if isinstance(value, float) else f"{clean_name:<30}: {value}"
-        output_lines.append(line)
+        if clean_name == 'obj_entry':  # isinstance(value, dict):
+            line = f"Object Results on different Confidence & IoU:"
+            output_lines.append(line)
+            for (conf_threshold, iou_threshold), value_dict in value.items():
+                line = f"  - Confidence >= {conf_threshold} & IoU >= {iou_threshold}:"
+                output_lines.append(line)
+                
+                tp_objects = value_dict['tp']
+                fp_objects = value_dict['fp']
+                fn_objects = value_dict['fn']
+                iou_sum = value_dict['iou_sum']
+                
+                obj_iou = iou_sum / tp_objects if tp_objects > 0 else 1.0
+                obj_precision = tp_objects / max(tp_objects+fp_objects, 1)
+                obj_recall = tp_objects / max(tp_objects+fn_objects, 1)
+                obj_f1 = (2 * obj_precision * obj_recall) / (obj_precision + obj_recall) if (obj_precision + obj_recall) > 0 else 0.0
+             
+                line = f"      > 'IoU': {obj_iou}"
+                output_lines.append(line)
+                line = f"      > 'Precision': {obj_precision}"
+                output_lines.append(line)
+                line = f"      > 'Recall': {obj_recall}"
+                output_lines.append(line)
+                line = f"      > 'F1': {obj_f1}"
+                output_lines.append(line)
+        else:
+            line = f"{clean_name:<30}: {value:.4f}" if isinstance(value, float) else f"{clean_name:<30}: {value}"
+            output_lines.append(line)
         
     output_lines.append("="*40)
     
@@ -140,13 +296,20 @@ def evaluate(args, config):
     text_content = "\n".join(output_lines)
     print(text_content)
     
-    os.makedirs("./tmp_eval", exist_ok=True)
-    txt_path = os.path.join("./tmp_eval", f"test_metrics_{exp_name}.txt")
+    eval_path_root = "./tmp_eval"
+    os.makedirs(eval_path_root, exist_ok=True)
+    txt_path = os.path.join(eval_path_root, f"test_metrics_{exp_name}.txt")
     
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(text_content)
         
     print(f"Metrics successfully saved to: {txt_path}")
+
+    plot_mean_average(
+        object_results=metrics["eval_obj_entry"],   # or test_ ?
+        root_save_path=eval_path_root, 
+        save_name=exp_name
+    )
 
 
 

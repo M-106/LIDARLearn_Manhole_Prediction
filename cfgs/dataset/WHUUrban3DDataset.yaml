@@ -5,7 +5,7 @@ N_POINTS: 200000  # 200000 # 16384 # 32768  # 65536  # 200000 # 4096  # 2048  # 
 USE_NORMALS: FALSE
 block_size: 5
 intensity_dropout: 0.5
-exp_name: manhole_seg_ptv3_optimized_dynamic_weighting_as_in_paper_loss  # ADJUST ME!!!
+exp_name: manhole_seg_ptv3_final_optimizations_whu  # ADJUST ME!!!
 # TRAIN:
 #   TRANSFORMS:
 #   - NAME: PointShuffle
