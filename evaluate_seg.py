@@ -48,6 +48,8 @@ def get_data_for_plot(obj_results,
     Filtert die Daten so, dass eine Metrik fixiert bleibt (z.B. iou_threshold = 0.5)
     und die andere Metrik über die X-Achse läuft.
     """
+    print(f"Get Data with fix_value = {fix_value}")
+
     # filter after threshols
     if fix_metric_name == "confident_threshold":
         key_idx = 0
@@ -56,17 +58,27 @@ def get_data_for_plot(obj_results,
     else:
         raise ValueError(f"fix_metric_name must be in ['confident_threshold', 'iou_threshold'] but got: {fix_metric_name}")
 
-    filtered = {key: value for key, value in obj_results.items() if key[key_idx] == fix_value}
-
     # convert to list
     filtered_list = []
-    for key, value in filtered_dict.items():
-        item = value.copy() 
-        item.update({
-            'confident_threshold': key[0], 
-            'iou_threshold': key[1]
-        })
-        filtered_list.append(item)
+    for key, value in object_results.items():
+        if isinstance(key[0], (float, int)) and key[key_idx] > fix_value-1e-3 and key[key_idx] < fix_value+1e-3:
+            item = value.copy() 
+            item.update({
+                'confident_threshold': key[0], 
+                'iou_threshold': key[1]
+            })
+            filtered_list.append(item)
+        elif isinstance(key[0], (tuple, list)) and key[key_idx] > fix_value-1e-3 and key[key_idx] < fix_value+1e-3:
+            item = value.copy() 
+            item.update({
+                'confident_threshold': key[0], 
+                'iou_threshold': key[1]
+            })
+            filtered_list.append(item)
+        else:
+            print(f"type(key[0]) = {type(key[0])}")
+
+        
         # sort for clean line
         
     filtered_list.sort(key=lambda x: x[variable_metric_name])
@@ -77,6 +89,8 @@ def get_data_for_plot(obj_results,
     AP = []
     AR = []
     AIOU = []
+
+    print(f"Found {len(filtered_list)} thresholds.")
 
     for r in filtered_list:
         tp, fp, fn = r["tp"], r["fp"], r["fn"]
@@ -119,8 +133,9 @@ def plot_and_save(iou_thresholds, AR, AP, AIOU, title, xlabel, save_path):
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.close(fig)
+    print(f"Plot saved at: {save_path}")
 
-
+# docker logs -f e3a8dbe19fa9
 
 def plot_mean_average(object_results, root_save_path, save_name):
     # 1. Confidence Curve (Fixed IoU Threshold on 0.5, variable Confident Threshold)
@@ -162,6 +177,8 @@ def plot_mean_average(object_results, root_save_path, save_name):
         xlabel='IoU Matching Threshold',
         save_path=save_path2
     )
+
+
 
 # main eval
 def evaluate(args, config):
@@ -298,13 +315,14 @@ def evaluate(args, config):
     
     eval_path_root = "./tmp_eval"
     os.makedirs(eval_path_root, exist_ok=True)
-    txt_path = os.path.join(eval_path_root, f"test_metrics_{exp_name}.txt")
+    txt_path = os.path.join(eval_path_root, f"test_metrics_{exp_name}_{config.dataset.name}.txt")
     
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(text_content)
         
     print(f"Metrics successfully saved to: {txt_path}")
 
+    print("Try Plotting results.")
     plot_mean_average(
         object_results=metrics["eval_obj_entry"],   # or test_ ?
         root_save_path=eval_path_root, 

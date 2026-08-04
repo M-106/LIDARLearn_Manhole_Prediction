@@ -503,7 +503,7 @@ class SegMetricsTracker:
             num_pred_objects += obj_entry['pred']
             total_iou_sum += obj_entry['iou_sum']
     
-            obj_iou = total_iou_sum / tp_objects
+            obj_iou = total_iou_sum / max(tp_objects, 1)
             obj_precision = tp_objects / max(tp_objects+fp_objects, 1)
             obj_recall = tp_objects / max(tp_objects+fn_objects, 1)
             obj_f1 = (2 * obj_precision * obj_recall) / (obj_precision + obj_recall) if (obj_precision + obj_recall) > 0 else 0.0

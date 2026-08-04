@@ -173,7 +173,7 @@ class WHUUrban3DDataset(Dataset):
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
         elif self.partition == "test":
             self.original_point_cloud_paths = self.point_cloud_paths
-            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1)
+            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=56.5)
 
             self.point_cloud_paths = self.point_cloud_paths_manholes_only
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")

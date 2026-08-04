@@ -215,7 +215,7 @@ def save_patch_visualization(features, labels, save_path, title="Patch Investiga
     plt.close(fig)
 
 
-def extract_samples(point_cloud_paths, amount=3) -> list:
+def extract_samples(point_cloud_paths, amount=3, min_manhole_points=100) -> list:
     samples = []
 
     for cur_pc_path in point_cloud_paths:
@@ -226,7 +226,7 @@ def extract_samples(point_cloud_paths, amount=3) -> list:
             cur_pc_path, instance_segmentation=False
         )
 
-        if np.sum(labels == 1) > 100:
+        if np.sum(labels == 1) > min_manhole_points:
             samples.append(cur_pc_path)
 
             if amount > 0 and len(samples) >= amount:
