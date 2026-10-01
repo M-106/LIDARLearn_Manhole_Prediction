@@ -26,6 +26,8 @@ import sys
 import numpy as np
 import torch
 
+# from helper import save_dir_creation
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
@@ -137,6 +139,7 @@ def main():
 
     if args.out_dir is None:
         args.out_dir = os.path.join(os.path.dirname(args.ckpt), 'vis')
+    # save_dir_creation(args.out_dir)
     os.makedirs(args.out_dir, exist_ok=True)
 
     # ── Load config ──────────────────────────────────────────────────────

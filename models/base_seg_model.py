@@ -9,6 +9,9 @@ Author: Said Ohamouddou
 """
 
 from abc import ABC, abstractmethod
+from collections import deque
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -231,6 +234,10 @@ class BaseSegModel(nn.Module, ABC):
         self.use_cls_label = config.use_cls_label
         self.config = config
 
+        self.num_value_saves = 5
+        self.last_acc_values = deque(maxlen=self.num_value_saves)
+        self.last_manhole_acc_values = deque(maxlen=self.num_value_saves)
+
     @abstractmethod
     def forward(
         self, pts: torch.Tensor, cls_label: torch.Tensor = None
@@ -256,14 +263,34 @@ class BaseSegModel(nn.Module, ABC):
         B, C, N = pred.shape
         # NLL loss expects [B, C, N] with class dim at position 1
 
-        # weights = torch.tensor([1.0, 50.0], device=pred.device, dtype=torch.float)
+        # dynamic loss weighting
+        # background_weighting = 1.0
+        # manhole_weighting = 50.0
+        # if len(self.last_acc_values) == self.last_acc_values.maxlen:
+        #     last_acc_values_np = np.array(self.last_acc_values)
+        #     mean = last_acc_values_np.mean()
+        #     # Trend via lineare regression
+        #     slope = np.polyfit(np.arange(len(last_acc_values_np)), last_acc_values_np, 1)[0]
+        #     slope *= len(last_acc_values_np)
+        #     background_weighting = 1.0 + (1.0 - mean) * max(0.0, -slope)
+        #     background_weighting = float(np.clip(background_weighting, 0.5, 10.0))
+
+        #     last_manhole_acc_values_np = np.array(self.last_manhole_acc_values)
+        #     mean = last_manhole_acc_values_np.mean()
+        #     # Trend via lineare regression
+        #     slope = np.polyfit(np.arange(len(last_manhole_acc_values_np)), last_manhole_acc_values_np, 1)[0]
+        #     slope *= len(last_manhole_acc_values_np)
+        #     manhole_weighting = 1.0 + (1.0 - mean) * max(0.0, -slope)  # error * trend-factor
+        #     manhole_weighting = float(np.clip(manhole_weighting, 0.5, 100.0))
+        # weights = torch.tensor([background_weighting, manhole_weighting], device=pred.device, dtype=torch.float)
+        
         num_background = (gt == 0).sum().float()
         num_manhole = (gt == 1).sum().float()
         epsilon = 1e-6
         weight_background = (num_background + num_manhole) / (2 * num_background + epsilon)
         weight_manhole = (num_background + num_manhole) / (2 * num_manhole + epsilon)
         weights = torch.tensor([weight_background, weight_manhole], device=pred.device, dtype=torch.float)
-        weights = torch.tensor(weights, device=pred.device, dtype=torch.float)
+        # weights = torch.tensor(weights, device=pred.device, dtype=torch.float)
 
         # print(f"pred shape before loss: {pred.shape} -> will be changed to {pred[1].shape}")
         # ==> CrossEntropyLoss => 
@@ -271,7 +298,16 @@ class BaseSegModel(nn.Module, ABC):
         # numerical more stanle and a bit faster but very similiar
         # loss = F.cross_entropy(pred, gt.long(), weight=weights, ignore_index=255)
 
-        loss = PTv3Loss(ce_weight=1.0, lovasz_weight=1.0)(preds=pred, gts=gt, weights=weights)
+        # loss = PTv3Loss(ce_weight=1.0, lovasz_weight=1.0)(preds=pred, gts=gt, weights=weights)
+
+        # cross entropy loss
+        loss_ce = F.cross_entropy(pred, gt.long(), weight=weights, ignore_index=255)
+
+        # dice loss
+        probs_manhole = F.softmax(pred, dim=1)[:, 1, :]
+        loss_dice = dice_loss(pred=probs_manhole, target=gt.long(), apply_sigmoid=False, ignore_index=255)
+
+        loss = loss_ce + loss_dice
 
         # loss = bce_dice_loss(pred=pred[:, 1, :],  # just use probability that it is a manhole
         #                      target=gt.long(),
@@ -293,26 +329,27 @@ class BaseSegModel(nn.Module, ABC):
 
         # loss = loss_1 + loss_2
 
-        # ratio = 0.015
-        # pos_weight = (1 - ratio) / ratio  # about 65
-        logits_manhole = pred[:, 1, :]
-        num_pos = (gt == 1).sum().float().clamp(min=1)
-        num_neg = (gt == 0).sum().float()
-        pos_weight = num_neg / num_pos
-        loss_focal = FocalLoss(gamma=2.0, pos_weight=pos_weight, ignore_index=255)(logits_manhole, gt.long())
-        # loss_iou = tversky_loss(logits_manhole, gt.long(), alpha=0.3, beta=0.7, smooth=1.0)
-        # loss = loss_focal + loss_iou
+        # # ratio = 0.015
+        # # pos_weight = (1 - ratio) / ratio  # about 65
+        # logits_manhole = pred[:, 1, :]
+        # num_pos = (gt == 1).sum().float().clamp(min=1)
+        # num_neg = (gt == 0).sum().float()
+        # pos_weight = num_neg / num_pos
+        # loss_focal = FocalLoss(gamma=2.0, pos_weight=pos_weight, ignore_index=255)(logits_manhole, gt.long())
+        # # loss_iou = tversky_loss(logits_manhole, gt.long(), alpha=0.3, beta=0.7, smooth=1.0)
+        # # loss = loss_focal + loss_iou
 
-        loss = loss_focal + loss
+        # loss = loss_focal + loss
 
         # debugging
-        probs = torch.sigmoid(logits_manhole)
-        pred_choice_focal = (probs > 0.5).long()
-        # pred_choice_argmax = pred.argmax(dim=1) 
-        precision, recall = log_precision_recall(logits_manhole, probs, gt.float(), ignore_index=255, path=log_path)
+        # probs = torch.sigmoid(logits_manhole)
+        # pred_choice_focal = (probs > 0.5).long()
+        # # pred_choice_argmax = pred.argmax(dim=1) 
+        # precision, recall = log_precision_recall(logits_manhole, probs, gt.float(), ignore_index=255, path=log_path)
 
-        pred_choice = pred_choice_focal  # [B, N]
+        # pred_choice = pred_choice_focal  # [B, N]
         
+        pred_choice = pred.argmax(dim=1)
         acc = (pred_choice == gt).float().mean() * 100.0
         mask = (gt == 1) & (gt != 255)
         if mask.sum() > 0:
@@ -323,7 +360,11 @@ class BaseSegModel(nn.Module, ABC):
             )  # if no manhole is in the batch
             # FIXME: 100 or 0 ?
 
-        return loss, acc, manhole_acc, precision, recall
+        # put values for dynamic loss weighting
+        self.last_acc_values.append(acc.item())
+        self.last_manhole_acc_values.append(manhole_acc.item())
+
+        return loss, acc, manhole_acc, torch.tensor(-999.9, device=pred.device), torch.tensor(-999.9, device=pred.device)  # precision, recall
 
     def get_num_parameters(self, trainable_only: bool = True) -> int:
         if trainable_only:

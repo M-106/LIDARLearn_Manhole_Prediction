@@ -15,8 +15,12 @@ from .utils import (load_h5_as_numpy,
                     save_patch_visualization,
                     extract_samples,
                     normalize_features,
+                    normalize_features_robust,
+                    SENSOR_CONFIGS,
                     augment_point_cloud)
 from .build import DATASETS
+
+# from helper import save_dir_creation
 
 
 
@@ -49,7 +53,7 @@ class WHUUrban3DDataset(Dataset):
         self.partition = config.subset  # 'train'|'val'|'test'
         self.test_area = int(getattr(config, "test_area", 5))
         self.feature_mode = str(getattr(config, "feature_mode", "xyzi"))
-        self.intensity_dropout = float(getattr(config, "intensity_dropout", 0.5))
+        self.intensity_dropout = float(getattr(config, "intensity_dropout", 0.2))
 
         if not hasattr(config, "intensity_dropout"):
             print("[WARNING] Config does not have 'intensity_dropout' attribute!")
@@ -138,7 +142,7 @@ class WHUUrban3DDataset(Dataset):
             hour = now.hour
             minute = now.minute
 
-            self.debug_out_path = f"./debugging/debugging_{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{config.exp_name}"
+            self.debug_out_path = f"/out/checkpoints/3d/debugging/debugging_{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{config.exp_name}"
 
             # for file in os.listdir("."):
             #     if file.startswith("debugging_"):
@@ -152,8 +156,10 @@ class WHUUrban3DDataset(Dataset):
             # raise ValueError("DEBUGGING REMOVAL")
             # ls ./src/LIDARLearn_Manhole_Prediction/debugging
 
+            # save_dir_creation(self.debug_out_path)
             os.makedirs(self.debug_out_path, exist_ok=True)
             shutil.rmtree(self.debug_out_path)
+            # save_dir_creation(self.debug_out_path)
             os.makedirs(self.debug_out_path, exist_ok=True)
 
             self.debug_log_path = os.path.join(self.debug_out_path, "log_.txt")
@@ -173,9 +179,10 @@ class WHUUrban3DDataset(Dataset):
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
         elif self.partition == "test":
             self.original_point_cloud_paths = self.point_cloud_paths
-            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=56.5)
+            # FIXME -> in testing use all samples, or not?
+            # self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=56.5)
 
-            self.point_cloud_paths = self.point_cloud_paths_manholes_only
+            self.point_cloud_paths = self.original_point_cloud_paths  # self.point_cloud_paths_manholes_only
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
 
     def __len__(self):
@@ -191,6 +198,10 @@ class WHUUrban3DDataset(Dataset):
             cur_pc_path, instance_segmentation=False
         )
 
+        # print(f"Intensity Range: {features[:, 3].min()} - {features[:, 3].max()}")
+        # print(f"Intensity Mean/Std: {features[:, 3].mean():.2f} / {features[:, 3].std():.2f}")
+
+
         # augmentation
         if self.partition == "train":
             features, labels = augment_point_cloud(features, labels, intensity_dropout=self.intensity_dropout)
@@ -203,7 +214,7 @@ class WHUUrban3DDataset(Dataset):
         current_points = features.shape[0]
         goal_points = self.num_point
 
-        if current_points != goal_points:
+        if current_points != goal_points and goal_points > 0:
 
             if current_points > goal_points:
                 weights = np.ones(current_points)
@@ -233,14 +244,35 @@ class WHUUrban3DDataset(Dataset):
         #         title="Patch Investigation",
         #     )
 
+        # print("|||||  After Aug/Downsampling |||||||")
+        # print(f"Intensity Range: {features[:, 3].min()} - {features[:, 3].max()}")
+        # print(f"Intensity Mean/Std: {features[:, 3].mean():.2f} / {features[:, 3].std():.2f}")
+
         # normalize
-        features = normalize_features(features, debug_prints=False)
+        # features = normalize_features(features, debug_prints=False)
+        features, norm_params = normalize_features_robust(
+            features, 
+            intensity_p1=SENSOR_CONFIGS['as-900hl']['intensity_p1'], 
+            intensity_p99=SENSOR_CONFIGS['as-900hl']['intensity_p99'], 
+            eps=1e-6, 
+            debug_prints=False
+        )
+
+        # print("|||||  After Norm |||||||")
+        # print(f"Intensity Range: {features[:, 3].min()} - {features[:, 3].max()}")
+        # print(f"Intensity Mean/Std: {features[:, 3].mean():.2f} / {features[:, 3].std():.2f}")
 
         # convert to torch
         features = torch.from_numpy(features).float()  # (N, 4)
         if self.feature_mode == "xyz":
             features = features[:, :3]
         labels = torch.from_numpy(labels).long()  # (N,)
+
+        # FIXME debugging
+        # print("|||||  After Numpy Conversition |||||||")
+        # print(f"Intensity Range: {features[:, 3].min()} - {features[:, 3].max()}")
+        # print(f"Intensity Mean/Std: {features[:, 3].mean():.2f} / {features[:, 3].std():.2f}")
+        # print("----------------------------------")
 
         # normalize
         # features[:, -1] = features[:, -1] - features[:, -1].mean(0)

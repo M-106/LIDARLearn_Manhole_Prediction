@@ -45,7 +45,7 @@ def _unpack_data(data, use_cls_label):
     return points, cls_label, target
 
 
-def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label, debug_out_path=None, epoch=0):
+def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label, debug_out_path=None, epoch=0, max_plot_counts=3):
     model.eval()
     acc = metrics_tracker.new_accumulator()
     total_loss = 0.0
@@ -67,7 +67,7 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
                 logits = model(points_bcn, None)
                 cls_np = np.zeros(points.shape[0], dtype=np.int32)
 
-            if plot_counter < 3 and debug_out_path is not None and epoch % 2 == 0:
+            if plot_counter < max_plot_counts and debug_out_path is not None and epoch % 2 == 0:
                 batch_idx = None
                 for idx_ in range(target.shape[0]):
                     if  (target[idx_] == 1).sum().item() > 200:
@@ -451,6 +451,10 @@ def save_pred_visualization(
     fig, ax = plt.subplots(figsize=(7 * 4, 7), ncols=4)
 
     # Image 1 - Intensity
+    # print("[Debugging Info, runner_seg.py]", flush=True)
+    # print(f"Intensity Min: {input_points[:, 3].min()}", flush=True)
+    # print(f"Intensity Max: {input_points[:, 3].max()}", flush=True)
+    # print(f"Intensity Unique Count: {len(np.unique(input_points[:, 3]))}", flush=True)
     ax[0].scatter(
             input_points[:, 0],
             input_points[:, 1],

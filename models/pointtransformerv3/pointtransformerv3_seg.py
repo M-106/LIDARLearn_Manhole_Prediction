@@ -202,9 +202,9 @@ class PointTransformerV3_Seg(BaseSegModel):
         self.backbone = PointTransformerV3SegBase(
             in_channels=channels,
             num_classes=self.seg_classes,
-            enable_flash=config.get('enable_flash', False),
-            enc_patch_size=(16, 16, 16, 16, 16),
-            dec_patch_size=(16, 16, 16, 16),
+            enable_flash=config.get('enable_flash', True),
+            # enc_patch_size=(16, 16, 16, 16, 16),
+            # dec_patch_size=(16, 16, 16, 16),
             # enc_patch_size=(48, 48, 48, 48, 48),
             # dec_patch_size=(48, 48, 48, 48),
             # enc_patch_size=(64, 64, 64, 64, 64),
@@ -213,11 +213,12 @@ class PointTransformerV3_Seg(BaseSegModel):
             # dec_patch_size=(256, 256, 256, 256),
             # enc_patch_size=(512, 512, 512, 512, 512),
             # dec_patch_size=(512, 512, 512, 512),
-            # enc_patch_size=(1024, 1024, 1024, 1024, 1024),
-            # dec_patch_size=(1024, 1024, 1024, 1024),
+            enc_patch_size=(1024, 1024, 1024, 1024, 1024),
+            dec_patch_size=(1024, 1024, 1024, 1024),
             # enc_channels=(32, 64, 128, 256, 512),
             # dec_patch_size=(32, 64, 128, 256),
-            stride=(1, 1, 1, 1),  # stride=(4, 4, 4, 4),   # maybe biggest problem! Before: stride=(2, 2, 2, 2),
+            stride=(2, 2, 2, 2),
+            # stride=(1, 1, 1, 1),  # stride=(4, 4, 4, 4),   # maybe biggest problem! Before: stride=(2, 2, 2, 2),
             # maybe a tighter bottleneck is needed?
             enc_depths=(2, 2, 2, 6, 2),  # depth of network/blocks
         )
@@ -236,7 +237,7 @@ class PointTransformerV3_Seg(BaseSegModel):
         batch = torch.arange(B, device=pts.device).repeat_interleave(N)
 
         # Grid coord for sparse conv (shift to non-negative, then quantize)
-        grid_size = 0.01  # 0.01
+        grid_size = 0.03  # 0.01
         coord_shifted = coord - coord.min(0)[0]
         grid_coord = torch.div(coord_shifted, grid_size, rounding_mode='trunc').int()
 

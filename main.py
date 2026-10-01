@@ -22,6 +22,8 @@ from tools.runner_seg import run_net as seg_runner
 from utils import parser, dist_utils, misc
 from utils.logger import get_root_logger, print_log
 from utils.config import get_config, log_args_to_file, log_config_to_file
+# from helper import save_dir_creation
+
 
 
 def aggregate_cv_results(all_fold_results, exp_path, logger):
@@ -197,6 +199,7 @@ def run_all_folds(args, config, logger):
 
         fold_args = copy.deepcopy(args)
         fold_args.experiment_path = os.path.join(base_exp_path, f"fold_{fold}")
+        # save_dir_creation(fold_args.experiment_path)
         os.makedirs(fold_args.experiment_path, exist_ok=True)
 
         fold_result = finetune(fold_args, fold_config)

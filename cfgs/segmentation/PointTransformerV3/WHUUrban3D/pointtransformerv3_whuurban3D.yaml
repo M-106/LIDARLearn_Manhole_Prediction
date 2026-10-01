@@ -52,8 +52,8 @@ optimizer:
   param_name: 'block'
   param_lr: 0.00009
   kwargs:
-    lr: 0.0009  # 0.0003
-    weight_decay: 0.05
+    lr: 0.009  # 0.0003
+    weight_decay: 0.01
 
 scheduler:
   type: CosLR  # LambdaLR  # CosLR  # StepLR

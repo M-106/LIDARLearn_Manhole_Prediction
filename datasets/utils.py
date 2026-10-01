@@ -21,8 +21,8 @@ def load_h5_as_numpy(path, instance_segmentation=False):
             # number_returns = file_["number_returns"][:]
 
         intensities = intensities.astype(np.float32)
-        if intensities.max() > 1.0:
-            intensities = intensities / 255
+        # if intensities.max() > 1.0:
+        #     intensities = intensities / 255
 
         # stack features -> [N, 4]
         features = np.hstack([coordinates, intensities.reshape(-1, 1)]).astype(
@@ -285,6 +285,88 @@ def normalize_features(features, debug_prints=False):
         print(f"  NaN in output:{np.isnan(features).any()}")
 
     return features
+
+SENSOR_CONFIGS = {
+    'as-900hl': {  # WHU
+        'intensity_p1': 1100.0, 
+        'intensity_p99': 44403.0,
+    },
+    'riegl_vux-1ha_mls': {  # sud
+        'intensity_p1': 1935.0, 
+        'intensity_p99': 3384.0, 
+    },
+   'default': {'intensity_p1': 0.0, 'intensity_p99': 255.0, 'max_density': 100}
+}
+
+def normalize_features_robust(
+    features,
+    intensity_p1,
+    intensity_p99,
+    eps=1e-6,
+    debug_prints=False
+):
+    """
+    Standard Point Cloud Normalization:
+    - XYZ: Centered at centroid and scaled into a unit sphere (max distance = 1.0)
+    - Intensity: Scaled using global dataset percentiles mapped to [0, 1]
+    """
+    features = features.astype(np.float32, copy=True)
+    
+    # Spatial Coordinates (XYZ) -> Unit-Sphere Scaling
+    xyz = features[:, :3]
+    centroid = xyz.mean(axis=0)
+    xyz_centered = xyz - centroid
+    
+    #     Calculate max distance from centroid (radius of unit sphere)
+    distances = np.linalg.norm(xyz_centered, axis=1)
+    scale = np.max(distances)
+    
+    if scale > eps:
+        features[:, :3] = xyz_centered / scale
+    else:
+        features[:, :3] = np.zeros_like(xyz_centered)
+
+    # Intensity -> Global Percentile Min-Max Normalization
+    intensity = features[:, 3]
+    denom = intensity_p99 - intensity_p1
+    
+    if denom > eps:
+        norm_intensity = (intensity - intensity_p1) / denom
+        features[:, 3] = np.clip(norm_intensity, 0.0, 1.0)
+    else:
+        features[:, 3] = 0.0
+
+    # Save normalization parameters required for denormalization
+    norm_params = {
+        'centroid': centroid,
+        'scale': scale,
+        'intensity_p1': intensity_p1,
+        'intensity_p99': intensity_p99
+    }
+
+    if debug_prints:
+        print(f"Centroid: {centroid}")
+        print(f"Scale (Sphere Radius): {scale:.4f}")
+        print(f"Intensity Range: [{features[:, 3].min():.2f}, {features[:, 3].max():.2f}]")
+
+    return features, norm_params
+
+
+def denormalize_features_unit_sphere(features_norm, norm_params):
+    """
+    Reconstructs original spatial coordinates and global intensity scale.
+    """
+    features_orig = features_norm.astype(np.float32, copy=True)
+
+    # Restore XYZ Coordinates
+    # Reverse scaling and shift back by the centroid
+    features_orig[:, :3] = (features_norm[:, :3] * norm_params['scale']) + norm_params['centroid']
+
+    # Restore Intensity
+    denom = norm_params['global_p99'] - norm_params['global_p1']
+    features_orig[:, 3] = (features_norm[:, 3] * denom) + norm_params['global_p1']
+
+    return features_orig
 
 
 

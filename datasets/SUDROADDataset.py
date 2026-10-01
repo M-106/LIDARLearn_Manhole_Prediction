@@ -22,6 +22,7 @@ from .utils import (load_h5_as_numpy,
                     normalize_features,
                     augment_point_cloud)
 
+# from helper import save_dir_creation
 
 
 @DATASETS.register_module()
@@ -109,14 +110,16 @@ class SUDROADDataset(Dataset):
             hour = now.hour
             minute = now.minute
 
-            self.debug_out_path = f"./debugging/debugging_{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{config.exp_name}"
+            self.debug_out_path = f"/out/checkpoints/3d/debugging/debugging_{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{config.exp_name}"
 
             # shutil.rmtree(f"./debugging/debugging_2026_05_27_22_16_manhole_seg_ptv3_nl_loss")
             # raise ValueError("DEBUGGING REMOVAL")
             # ls ./src/LIDARLearn_Manhole_Prediction/debugging
 
+            # save_dir_creation(self.debug_out_path)
             os.makedirs(self.debug_out_path, exist_ok=True)
             shutil.rmtree(self.debug_out_path)
+            # save_dir_creation(self.debug_out_path)
             os.makedirs(self.debug_out_path, exist_ok=True)
 
             self.debug_log_path = os.path.join(self.debug_out_path, "log_.txt")
@@ -168,7 +171,7 @@ class SUDROADDataset(Dataset):
         current_points = features.shape[0]
         goal_points = self.num_point
 
-        if current_points != goal_points:
+        if current_points != goal_points and goal_points > 0:
 
             if current_points > goal_points:
                 weights = np.ones(current_points)
@@ -198,7 +201,14 @@ class SUDROADDataset(Dataset):
         #         title="Patch Investigation",
         #     )
 
-        features = normalize_features(features, debug_prints=False)
+        # features = normalize_features(features, debug_prints=False)
+        features, norm_params = normalize_features_robust(
+            features, 
+            intensity_p1=SENSOR_CONFIGS['riegl_vux-1ha_mls']['intensity_p1'], 
+            intensity_p99=SENSOR_CONFIGS['riegl_vux-1ha_mls']['intensity_p99'], 
+            eps=1e-6, 
+            debug_prints=False
+        )
 
         # convert to torch
         features = torch.from_numpy(features).float()  # (N, 4)

@@ -11,6 +11,8 @@ from .SUDROADDataset import SUDROADDataset
 
 from .build import DATASETS
 
+# from helper import save_dir_creation
+
 
 
 @DATASETS.register_module()
@@ -45,14 +47,16 @@ class MergedUrbanSUDDataset(Dataset):
             hour = now.hour
             minute = now.minute
 
-            self.debug_out_path = f"./debugging/debugging_{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{config.exp_name}"
+            self.debug_out_path = f"/out/checkpoints/3d/debugging/debugging_{year}_{month:02}_{day:02}_{hour:02}_{minute:02}_{config.exp_name}"
 
             # shutil.rmtree(f"./debugging/debugging_2026_05_27_22_16_manhole_seg_ptv3_nl_loss")
             # raise ValueError("DEBUGGING REMOVAL")
             # ls ./src/LIDARLearn_Manhole_Prediction/debugging
 
+            # save_dir_creation(self.debug_out_path)
             os.makedirs(self.debug_out_path, exist_ok=True)
             shutil.rmtree(self.debug_out_path)
+            # save_dir_creation(self.debug_out_path)
             os.makedirs(self.debug_out_path, exist_ok=True)
 
             self.debug_log_path = os.path.join(self.debug_out_path, "log_.txt")

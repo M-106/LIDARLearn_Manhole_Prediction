@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 
 from utils.logger import print_log
 
+# from helper import save_dir_creation
+
 
 
 # helper
@@ -185,6 +187,15 @@ class SegMetricsTracker:
 
             # -1 label is noise
             pred_obj_ids = clustered_pred.labels_
+            MIN_POINTS = 10
+            labels, counts = np.unique(pred_obj_ids, return_counts=True)
+            # Find all Cluster-IDs (but not -1), which have not enough points
+            small_clusters = labels[(counts <= MIN_POINTS) & (labels != -1)]
+            
+            # Re-label Points in small clusters as -1
+            if len(small_clusters) > 0:
+                pred_obj_ids[np.isin(pred_obj_ids, small_clusters)] = -1
+            
             valid_pred = pred_obj_ids != -1
             num_pred_objects = len(np.unique(pred_obj_ids[valid_pred]))
 
@@ -290,8 +301,10 @@ class SegMetricsTracker:
         axes[2].set_aspect('equal')
 
         file_root_path = "./tmp_eval/tmp_viz"
+        # save_dir_creation(file_root_path)
         os.makedirs(file_root_path, exist_ok=True)
         shutil.rmtree(file_root_path)
+        # save_dir_creation(file_root_path)
         os.makedirs(file_root_path, exist_ok=True)
         plt.savefig(os.path.join(file_root_path, f"tmp_eval_clustering_check_{np.random.randint(0, 1000)}.png"))
         plt.close(fig)

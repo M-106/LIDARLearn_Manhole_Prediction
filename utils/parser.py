@@ -121,7 +121,9 @@ def get_args():
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
 
-    args.experiment_path = os.path.join('./experiments', Path(args.config).parent.stem,
+    # args.experiment_path = os.path.join('./experiments', Path(args.config).parent.stem,
+    #                                     args.exp_name)
+    args.experiment_path = os.path.join('/out/checkpoints/3d', Path(args.config).parent.stem,
                                         args.exp_name)
     args.log_name = Path(args.config).stem
     # Auto-suffix if the target experiment path already exists, unless the
@@ -159,5 +161,6 @@ def _resolve_experiment_path(args):
 
 def create_experiment_dir(args):
     if not os.path.exists(args.experiment_path):
-        os.makedirs(args.experiment_path)
+        # save_dir_creation(args.experiment_path)
+        os.makedirs(args.experiment_path, exist_ok=True)
         print('Create experiment path successfully at %s' % args.experiment_path)

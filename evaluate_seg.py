@@ -7,6 +7,7 @@ python evaluate_seg.py \
 from pathlib import Path
 
 import os
+import shutil
 import time
 import warnings
 
@@ -21,6 +22,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import matplotlib.pyplot as plt
+
 from tools import builder
 from tools.runner_seg import _validate
 from tools.metrics_tracker_seg import SegMetricsTracker
@@ -32,6 +35,8 @@ from utils.config import get_config, log_args_to_file, log_config_to_file
 
 from pathlib import Path
 import sys
+
+# from helper import save_dir_creation
 
 # --- IMPORTANT: make project root importable when calling:
 # python tools/evaluate_seg.py ...
@@ -60,7 +65,7 @@ def get_data_for_plot(obj_results,
 
     # convert to list
     filtered_list = []
-    for key, value in object_results.items():
+    for key, value in obj_results.items():
         if isinstance(key[0], (float, int)) and key[key_idx] > fix_value-1e-3 and key[key_idx] < fix_value+1e-3:
             item = value.copy() 
             item.update({
@@ -138,9 +143,14 @@ def plot_and_save(iou_thresholds, AR, AP, AIOU, title, xlabel, save_path):
 # docker logs -f e3a8dbe19fa9
 
 def plot_mean_average(object_results, root_save_path, save_name):
+    print(f"object_results: {object_results}")
+    print(f"len object_results: {len(object_results)}")
     # 1. Confidence Curve (Fixed IoU Threshold on 0.5, variable Confident Threshold)
     save_path1 = os.path.join(root_save_path, f"confidence_curve_{save_name}.png")
+
+    print(f"Save-path 1: {save_path1}")
     
+    print("Try to get data")
     conf_thresholds, AP, AR, AIOU = get_data_for_plot(
         object_results, 
         fix_metric_name="iou_threshold", 
@@ -182,6 +192,13 @@ def plot_mean_average(object_results, root_save_path, save_name):
 
 # main eval
 def evaluate(args, config):
+
+    output_dir = f"./tmp_eval/{config.model.NAME}"
+    # save_dir_creation(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    shutil.rmtree(output_dir)
+    # save_dir_creation(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
     # Dataset
     _, test_loader = builder.dataset_builder(
@@ -268,6 +285,9 @@ def evaluate(args, config):
         metrics_tracker,
         num_obj_classes=num_obj_classes,
         use_cls_label=use_cls_label,
+        debug_out_path=output_dir,
+        epoch=2,
+        max_plot_counts=50
     )
 
     output_lines = []
@@ -311,11 +331,11 @@ def evaluate(args, config):
     
     # print
     text_content = "\n".join(output_lines)
-    print(text_content)
+    # print(text_content)
     
-    eval_path_root = "./tmp_eval"
-    os.makedirs(eval_path_root, exist_ok=True)
-    txt_path = os.path.join(eval_path_root, f"test_metrics_{exp_name}_{config.dataset.name}.txt")
+    # eval_path_root = "./tmp_eval"
+    # os.makedirs(eval_path_root, exist_ok=True)
+    txt_path = os.path.join(output_dir, f"test_metrics_{exp_name}_{config.dataset.name}.txt")
     
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(text_content)
@@ -325,7 +345,7 @@ def evaluate(args, config):
     print("Try Plotting results.")
     plot_mean_average(
         object_results=metrics["eval_obj_entry"],   # or test_ ?
-        root_save_path=eval_path_root, 
+        root_save_path=output_dir, 
         save_name=exp_name
     )
 
@@ -349,6 +369,7 @@ def main():
     if not hasattr(args, "experiment_path") or args.experiment_path is None:
         args.experiment_path = "./experiments_eval"
 
+    # save_dir_creation(args.experiment_path)
     os.makedirs(args.experiment_path, exist_ok=True)
 
     # utput dir fallback
