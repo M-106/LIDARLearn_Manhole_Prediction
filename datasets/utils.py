@@ -215,7 +215,7 @@ def save_patch_visualization(features, labels, save_path, title="Patch Investiga
     plt.close(fig)
 
 
-def extract_samples(point_cloud_paths, amount=3, min_manhole_points=100) -> list:
+def extract_samples(point_cloud_paths, amount=3, min_manhole_points=-1, min_points=-1) -> list:
     samples = []
 
     for cur_pc_path in point_cloud_paths:
@@ -226,7 +226,12 @@ def extract_samples(point_cloud_paths, amount=3, min_manhole_points=100) -> list
             cur_pc_path, instance_segmentation=False
         )
 
-        if np.sum(labels == 1) > min_manhole_points:
+        # check point amount
+        total_points = len(labels)  # or features.shape[0]
+        if total_points < min_points:
+            continue
+
+        elif np.sum(labels == 1) > min_manhole_points:
             samples.append(cur_pc_path)
 
             if amount > 0 and len(samples) >= amount:
@@ -318,13 +323,16 @@ def normalize_features_robust(
     xyz_centered = xyz - centroid
     
     #     Calculate max distance from centroid (radius of unit sphere)
-    distances = np.linalg.norm(xyz_centered, axis=1)
-    scale = np.max(distances)
+    # distances = np.linalg.norm(xyz_centered, axis=1)
+    # scale = np.max(distances)
+    scale = -999
     
-    if scale > eps:
-        features[:, :3] = xyz_centered / scale
-    else:
-        features[:, :3] = np.zeros_like(xyz_centered)
+    # if scale > eps:
+    #     features[:, :3] = xyz_centered / scale
+    # else:
+    #     features[:, :3] = np.zeros_like(xyz_centered)
+    # scaling without removing anything
+    features[:, :3] = xyz_centered
 
     # Intensity -> Global Percentile Min-Max Normalization
     intensity = features[:, 3]
@@ -360,7 +368,7 @@ def denormalize_features_unit_sphere(features_norm, norm_params):
 
     # Restore XYZ Coordinates
     # Reverse scaling and shift back by the centroid
-    features_orig[:, :3] = (features_norm[:, :3] * norm_params['scale']) + norm_params['centroid']
+    features_orig[:, :3] = features_norm[:, :3] + norm_params['centroid']   # features_norm[:, :3] * norm_params['scale'])
 
     # Restore Intensity
     denom = norm_params['global_p99'] - norm_params['global_p1']

@@ -33,28 +33,44 @@ def _to_one_hot(y, num_classes):
 
 
 def _unpack_data(data, use_cls_label):
-    if len(data) == 3:
+    if len(data) == 5:
+        points, cls_label, target, centroid, scale = data
+        if not use_cls_label:
+            cls_label = None
+        return points, cls_label, target, centroid, scale
+    elif len(data) == 4:
+        points, target, centroid, scales = data
+        return points, None, target, centroid, scales
+    elif len(data) == 3:
         points, cls_label, target = data
         if not use_cls_label:
             cls_label = None
+        return points, cls_label, target, None, None
     elif len(data) == 2:
         points, target = data
-        cls_label = None
+        return points, None, target, None, None
     else:
         raise ValueError(f"Expected data tuple of length 2 or 3, got {len(data)}")
     return points, cls_label, target
 
 
-def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label, debug_out_path=None, epoch=0, max_plot_counts=3):
+def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label, debug_out_path=None, epoch=0, max_plot_counts=3, save_npy_dir=None, dataset_name="WHUUrban3D"):
     model.eval()
     acc = metrics_tracker.new_accumulator()
     total_loss = 0.0
     total_batches = 0
     plot_counter = 0
 
+    if save_npy_dir is not None:
+        os.makedirs(save_npy_dir, exist_ok=True)
+        os.chmod(save_npy_dir, 0o777)
+
     with torch.no_grad():
         for sample_idx, (_, _, data) in enumerate(dataloader):
-            points, cls_label, target = _unpack_data(data, use_cls_label)
+            if save_npy_dir is not None:
+                start_time = time.perf_counter()
+
+            points, cls_label, target, centroids, scales = _unpack_data(data, use_cls_label)
             points = points.float().cuda()
             target = target.long().cuda()
             points_bcn = points.transpose(1, 2).contiguous()
@@ -66,6 +82,56 @@ def _validate(model, dataloader, metrics_tracker, num_obj_classes, use_cls_label
             else:
                 logits = model(points_bcn, None)
                 cls_np = np.zeros(points.shape[0], dtype=np.int32)
+
+            # Save predictions
+            if save_npy_dir is not None:
+                # preds_labels = logits.argmax(dim=1)  # Shape: [Batch, NumPoints]
+                probs = torch.softmax(logits, dim=1)
+
+                # de-normalize result?? Or is only input normalized?
+                # No, no norm!
+
+                # Only using probability of manholes
+                # Shape change: [Batch, Classes, Points] -> [Batch, Points]
+                probs = torch.softmax(logits, dim=1)  # change value range
+                preds_probs = probs[:, 1, :] if probs.dim() == 3 else probs[:, 1]
+                    
+                batch_size_current = points.shape[0]
+
+                elapsed_prediction_time = time.perf_counter() - start_time
+
+                for b_idx in range(batch_size_current):
+                    global_idx = (sample_idx * dataloader.batch_size) + b_idx
+
+                    # extract patch id
+                    cur_pc_path = dataloader.dataset.point_cloud_paths[global_idx]
+                    _, scene_name = os.path.split(cur_pc_path)
+                    scene_name = ".".join(scene_name.split(".")[:-1]).replace("preprocessed_patch_", "")
+                    pc_id, x_start, y_start = scene_name.split("_")[:3]
+
+                    # print(f"[INFO] Check: Is Patch-ID right: {pc_id}_{x_start}_{y_start}")
+
+                    # You might need to adjust the variables above depending on what print(meta1, meta2) shows!
+                    filename = f"{dataset_name}_{pc_id}_{x_start}_{y_start}.npy"
+                    file_path = os.path.join(save_npy_dir, filename)
+                    
+                    cur_scale = scales[b_idx].detach().cpu().numpy() if scales is not None else np.array([1.0])
+
+                    # Saving just the raw class predictions [N]
+                    save_dict = {
+                        "points": points[b_idx].detach().cpu().numpy(), # Shape: [N, 3] or [N, 4]
+                        "probs": preds_probs[b_idx].detach().cpu().numpy(), # Shape: [N]
+                        "centroid": centroids[b_idx].detach().cpu().numpy(),
+                        "scale": cur_scale
+                    }
+                    np.save(file_path, save_dict)
+                    os.chmod(file_path, 0o666)
+
+                    # Save performance Time
+                    filename = f"{dataset_name}_{pc_id}_{x_start}_{y_start}_TIME.npy"
+                    file_path = os.path.join(save_npy_dir, filename)
+                    np.save(file_path, np.array([elapsed_prediction_time]))
+                    os.chmod(file_path, 0o666)
 
             if plot_counter < max_plot_counts and debug_out_path is not None and epoch % 2 == 0:
                 batch_idx = None
@@ -235,7 +301,7 @@ def run_net(args, config):
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch}", ncols=100, leave=False)
         for sample_idx, (_, _, data) in enumerate(pbar):
-            points, cls_label, target = _unpack_data(data, use_cls_label)
+            points, cls_label, target, _, _ = _unpack_data(data, use_cls_label)
             points = points.float().cuda()
             target = target.long().cuda()
             points_bcn = points.transpose(1, 2).contiguous()

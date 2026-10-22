@@ -40,6 +40,8 @@ class WHUUrban3DDataset(Dataset):
         super().__init__()
         self.is_primary_dataset = is_primary_dataset
 
+        self.name = "whu"
+
         preprocessed = True
         self.path = os.path.join(config.DATA_PATH, "mls", "h5")
         if preprocessed:
@@ -172,7 +174,7 @@ class WHUUrban3DDataset(Dataset):
             # self.point_cloud_paths_8_manholes = extract_samples(self.point_cloud_paths, amount=8)
             # self.point_cloud_paths_16_manholes = extract_samples(self.point_cloud_paths, amount=16)
             # self.point_cloud_paths_32_manholes = extract_samples(self.point_cloud_paths, amount=32)
-            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1)
+            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=100, min_points=512)
 
             self.point_cloud_paths = self.point_cloud_paths_manholes_only
             # self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=3)
@@ -180,9 +182,16 @@ class WHUUrban3DDataset(Dataset):
         elif self.partition == "test":
             self.original_point_cloud_paths = self.point_cloud_paths
             # FIXME -> in testing use all samples, or not?
-            # self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=56.5)
+            # self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=-1, min_points=512)
 
             self.point_cloud_paths = self.original_point_cloud_paths  # self.point_cloud_paths_manholes_only
+            print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
+        else:
+            self.original_point_cloud_paths = self.point_cloud_paths
+            # FIXME -> in testing use all samples, or not?
+            self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=-1, min_points=512)
+
+            # self.point_cloud_paths = self.original_point_cloud_paths  # self.point_cloud_paths_manholes_only
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
 
     def __len__(self):
@@ -236,6 +245,11 @@ class WHUUrban3DDataset(Dataset):
             features = features[sample_idx]
             labels = labels[sample_idx]
 
+            # add minimal noise to avoid voxel-collapse
+            if self.partition != "train" and self.feature_mode == "xyz":
+                noise = np.random.normal(0, 0.001, size=(len(extra), 3))
+                features[current_points:, :3] += noise
+
         # if self.partition == "train" and idx < 3 and self.is_primary_dataset:
         #     save_patch_visualization(
         #         features,
@@ -278,7 +292,7 @@ class WHUUrban3DDataset(Dataset):
         # features[:, -1] = features[:, -1] - features[:, -1].mean(0)
         # features[:, -1] = features[:, -1] / features[:, -1].abs().max() # normalize
 
-        return "WHUUrban3D", scene_name, (features, labels)
+        return "WHUUrban3D", scene_name, (features, labels, norm_params['centroid'], norm_params['scale'])
 
     def epoch_update(self, epoch):
         self.epoch = epoch
@@ -294,7 +308,8 @@ class WHUUrban3DDataset(Dataset):
         # elif self.partition == "train" and self.epoch >= 200:
         #     self.point_cloud_paths = self.original_point_cloud_paths
 
-        self.point_cloud_paths = self.point_cloud_paths_manholes_only
+        # if self.partition == "train":
+        #     self.point_cloud_paths = self.point_cloud_paths_manholes_only
 
         # FIXME
         # if epoch < 200:

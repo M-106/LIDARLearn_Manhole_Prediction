@@ -209,12 +209,12 @@ class PointTransformerV3_Seg(BaseSegModel):
             # dec_patch_size=(48, 48, 48, 48),
             # enc_patch_size=(64, 64, 64, 64, 64),
             # dec_patch_size=(64, 64, 64, 64),
-            # enc_patch_size=(256, 256, 256, 256, 256),
-            # dec_patch_size=(256, 256, 256, 256),
+            enc_patch_size=(256, 256, 256, 256, 256),
+            dec_patch_size=(256, 256, 256, 256),
             # enc_patch_size=(512, 512, 512, 512, 512),
             # dec_patch_size=(512, 512, 512, 512),
-            enc_patch_size=(1024, 1024, 1024, 1024, 1024),
-            dec_patch_size=(1024, 1024, 1024, 1024),
+            # enc_patch_size=(1024, 1024, 1024, 1024, 1024),
+            # dec_patch_size=(1024, 1024, 1024, 1024),
             # enc_channels=(32, 64, 128, 256, 512),
             # dec_patch_size=(32, 64, 128, 256),
             stride=(2, 2, 2, 2),
@@ -237,8 +237,18 @@ class PointTransformerV3_Seg(BaseSegModel):
         batch = torch.arange(B, device=pts.device).repeat_interleave(N)
 
         # Grid coord for sparse conv (shift to non-negative, then quantize)
-        grid_size = 0.03  # 0.01
-        coord_shifted = coord - coord.min(0)[0]
+        grid_size = 0.01  # 0.01
+        # coord_shifted = coord - coord.min(0)[0]
+        # grid_coord = torch.div(coord_shifted, grid_size, rounding_mode='trunc').int()
+
+        # every point cloud should be centered around 0
+        # in preprocessing already centered around 0
+        coord_shifted = coord.clone()
+        # offset_ = torch.cat([torch.tensor([0], device=pts.device), offset])
+        # for i in range(B):
+        #     start, end = offset_[i], offset_[i+1]
+        #     coord_shifted[start:end] -= coord_shifted[start:end].min(0)[0]
+            
         grid_coord = torch.div(coord_shifted, grid_size, rounding_mode='trunc').int()
 
         data_dict = dict(
@@ -255,3 +265,21 @@ class PointTransformerV3_Seg(BaseSegModel):
         out = out.reshape(B, N, -1).permute(0, 2, 1).contiguous()
         # return F.log_softmax(out, dim=1)
         return out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

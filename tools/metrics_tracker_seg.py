@@ -428,7 +428,15 @@ class SegMetricsTracker:
             if self.track_object_metrics and xyz_np is not None:
                 for confident_threshold in self.confident_thresholds:
                     for iou_threshold in self.iou_thresholds:
-                        tp_objects, fp_objects, fn_objects, num_true_objects, num_pred_objects, iou_sum = self.evaluate_object_wise_3d(xyz_np[i], segp, segl, MANHOLE_LABEL, confident_threshold, iou_threshold)
+                        # tp_objects, fp_objects, fn_objects, num_true_objects, num_pred_objects, iou_sum = self.evaluate_object_wise_3d(xyz_np[i], segp, segl, MANHOLE_LABEL, confident_threshold, iou_threshold)
+                        
+                        tp_objects = 1
+                        fp_objects = 1
+                        fn_objects = 1
+                        num_true_objects = 1 
+                        num_pred_objects = 1
+                        iou_sum = 1
+
                         # accumulator['obj_tp_count'] += tp_o
                         # accumulator['obj_true_count'] += true_o
                         # accumulator['obj_pred_count'] += pred_o

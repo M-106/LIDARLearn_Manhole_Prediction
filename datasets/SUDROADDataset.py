@@ -8,10 +8,15 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from sklearn.cluster import DBSCAN
-import matplotlib.pyplot as plt
+import os
+import shutil
+import random
+from datetime import datetime
 
-from .build import DATASETS
+import h5py
+import numpy as np
+import torch
+from torch.utils.data import Dataset
 
 from .utils import (load_h5_as_numpy,
                     create_sliding_window_patch,
@@ -20,7 +25,10 @@ from .utils import (load_h5_as_numpy,
                     save_patch_visualization,
                     extract_samples,
                     normalize_features,
+                    normalize_features_robust,
+                    SENSOR_CONFIGS,
                     augment_point_cloud)
+from .build import DATASETS
 
 # from helper import save_dir_creation
 
@@ -37,6 +45,8 @@ class SUDROADDataset(Dataset):
     def __init__(self, config, is_primary_dataset=True):
         super().__init__()
         self.is_primary_dataset = is_primary_dataset
+
+        self.name = "sud"
 
         preprocessed = True
         self.path = config.DATA_PATH
@@ -134,17 +144,25 @@ class SUDROADDataset(Dataset):
             # self.point_cloud_paths_8_manholes = extract_samples(self.point_cloud_paths, amount=8)
             # self.point_cloud_paths_16_manholes = extract_samples(self.point_cloud_paths, amount=16)
             # self.point_cloud_paths_32_manholes = extract_samples(self.point_cloud_paths, amount=32)
-            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1)
+            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=100, min_points=512)
 
             self.point_cloud_paths = self.point_cloud_paths_manholes_only
             # self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=3)
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
         elif self.partition == "test":
             self.original_point_cloud_paths = self.point_cloud_paths
-            self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=56.5)
+            # self.point_cloud_paths_manholes_only = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=56.5)
 
-            self.point_cloud_paths = self.point_cloud_paths_manholes_only
+            self.point_cloud_paths = self.original_point_cloud_paths  # self.point_cloud_paths_manholes_only
             print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
+        else:
+            self.original_point_cloud_paths = self.point_cloud_paths
+            # FIXME -> in testing use all samples, or not?
+            self.point_cloud_paths = extract_samples(self.point_cloud_paths, amount=-1, min_manhole_points=-1, min_points=512)
+
+            # self.point_cloud_paths = self.original_point_cloud_paths  # self.point_cloud_paths_manholes_only
+            print(f"Updated to {len(self.point_cloud_paths)} point clouds.")
+
 
     def __len__(self):
         return len(self.point_cloud_paths)
@@ -218,7 +236,7 @@ class SUDROADDataset(Dataset):
         # features[:, -1] = features[:, -1] - features[:, -1].mean(0)
         # features[:, -1] = features[:, -1] / features[:, -1].abs().max() # normalize
 
-        return "SUDROAD", scene_name, (features, labels)
+        return "SUDROAD", scene_name, (features, labels, norm_params['centroid'], norm_params['scale'])
 
     def epoch_update(self, epoch):
         self.epoch = epoch
@@ -234,7 +252,8 @@ class SUDROADDataset(Dataset):
         # elif self.partition == "train" and self.epoch >= 200:
         #     self.point_cloud_paths = self.original_point_cloud_paths
 
-        self.point_cloud_paths = self.point_cloud_paths_manholes_only
+        # if self.partition == "train":
+        #     self.point_cloud_paths = self.point_cloud_paths_manholes_only
 
         # if epoch < 200:
         #     self.point_cloud_paths = self.point_cloud_paths_manholes_only

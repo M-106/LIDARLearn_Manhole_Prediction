@@ -39,10 +39,12 @@ class PointNet2_MSG_Seg(BaseSegModel):
         # When input has no extra features (xyz-only), c_in=0 so MLP input = 0+3 = 3.
         # When input has extra features (e.g. normals), c_in = extra_channels.
         c_in = channels - 3  # channels  # use_xyz=True handles xyz channels
+        
+        # 1. for small details -> 5cm - 10cm
         self.SA_modules.append(
             PointnetSAModuleMSG(
-                npoint=1024,
-                radii=[0.01, 0.05],
+                npoint=16384,  # 1024,
+                radii=[0.05, 0.1],
                 nsamples=[16, 32],
                 mlps=[[c_in, 16, 16, 32], [c_in, 32, 32, 64]],
                 use_xyz=True,
@@ -50,10 +52,11 @@ class PointNet2_MSG_Seg(BaseSegModel):
         )
         c_out_0 = 32 + 64  # 96
 
+        # 2. detecting half manholes (20cm - 40cm)
         self.SA_modules.append(
             PointnetSAModuleMSG(
-                npoint=256,
-                radii=[0.05, 0.1],
+                npoint=4096,  # 256,
+                radii=[0.2, 0.4],
                 nsamples=[16, 32],
                 mlps=[[c_out_0, 64, 64, 128], [c_out_0, 64, 96, 128]],
                 use_xyz=True,
@@ -61,10 +64,11 @@ class PointNet2_MSG_Seg(BaseSegModel):
         )
         c_out_1 = 128 + 128  # 256
 
+        # 3. detecting full manholes
         self.SA_modules.append(
             PointnetSAModuleMSG(
-                npoint=64,
-                radii=[0.1, 0.2],
+                npoint=1024,  # 64,
+                radii=[0.4, 0.8],
                 nsamples=[16, 32],
                 mlps=[[c_out_1, 128, 196, 256], [c_out_1, 128, 196, 256]],
                 use_xyz=True,
@@ -72,10 +76,11 @@ class PointNet2_MSG_Seg(BaseSegModel):
         )
         c_out_2 = 256 + 256  # 512
 
+        # 4. global context (1.6m radius)
         self.SA_modules.append(
             PointnetSAModuleMSG(
-                npoint=16,
-                radii=[0.2, 0.4],
+                npoint=256,
+                radii=[0.8, 1.6],
                 nsamples=[16, 32],
                 mlps=[[c_out_2, 256, 256, 512], [c_out_2, 256, 384, 512]],
                 use_xyz=True,

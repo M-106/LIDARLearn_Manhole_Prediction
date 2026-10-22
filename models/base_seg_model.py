@@ -284,13 +284,13 @@ class BaseSegModel(nn.Module, ABC):
         #     manhole_weighting = float(np.clip(manhole_weighting, 0.5, 100.0))
         # weights = torch.tensor([background_weighting, manhole_weighting], device=pred.device, dtype=torch.float)
         
-        num_background = (gt == 0).sum().float()
-        num_manhole = (gt == 1).sum().float()
-        epsilon = 1e-6
-        weight_background = (num_background + num_manhole) / (2 * num_background + epsilon)
-        weight_manhole = (num_background + num_manhole) / (2 * num_manhole + epsilon)
-        weights = torch.tensor([weight_background, weight_manhole], device=pred.device, dtype=torch.float)
-        # weights = torch.tensor(weights, device=pred.device, dtype=torch.float)
+        # num_background = (gt == 0).sum().float()
+        # num_manhole = (gt == 1).sum().float()
+        # epsilon = 1e-6
+        # weight_background = (num_background + num_manhole) / (2 * num_background + epsilon)
+        # weight_manhole = (num_background + num_manhole) / (2 * num_manhole + epsilon)
+        # weights = torch.tensor([weight_background, weight_manhole], device=pred.device, dtype=torch.float)
+        weights = torch.tensor([1.0, 50.0], device=pred.device, dtype=torch.float)
 
         # print(f"pred shape before loss: {pred.shape} -> will be changed to {pred[1].shape}")
         # ==> CrossEntropyLoss => 
@@ -370,3 +370,5 @@ class BaseSegModel(nn.Module, ABC):
         if trainable_only:
             return sum(p.numel() for p in self.parameters() if p.requires_grad)
         return sum(p.numel() for p in self.parameters())
+
+

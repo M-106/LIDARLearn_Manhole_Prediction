@@ -193,12 +193,13 @@ def plot_mean_average(object_results, root_save_path, save_name):
 # main eval
 def evaluate(args, config):
 
-    output_dir = f"./tmp_eval/{config.model.NAME}"
+    output_dir = f"/out/checkpoints/3d/tmp_eval/{config.model.NAME}"
     # save_dir_creation(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     shutil.rmtree(output_dir)
     # save_dir_creation(output_dir)
     os.makedirs(output_dir, exist_ok=True)
+    os.chmod(output_dir, 0o777)
 
     # Dataset
     _, test_loader = builder.dataset_builder(
@@ -279,6 +280,10 @@ def evaluate(args, config):
         iou_thresholds=np.arange(0.00, 0.95+0.05, 0.05)
     )
 
+    # for saving preds
+    export_folder_name = f"3D_SEG_{exp_name}"
+    save_directory = os.path.join(output_dir, export_folder_name)
+
     metrics = _validate(
         model,
         test_loader,
@@ -287,7 +292,9 @@ def evaluate(args, config):
         use_cls_label=use_cls_label,
         debug_out_path=output_dir,
         epoch=2,
-        max_plot_counts=50
+        max_plot_counts=50,
+        save_npy_dir=save_directory,
+        dataset_name=test_loader.dataset.name
     )
 
     output_lines = []
@@ -335,19 +342,19 @@ def evaluate(args, config):
     
     # eval_path_root = "./tmp_eval"
     # os.makedirs(eval_path_root, exist_ok=True)
-    txt_path = os.path.join(output_dir, f"test_metrics_{exp_name}_{config.dataset.name}.txt")
+    txt_path = os.path.join(output_dir, f"test_metrics_{exp_name}_{test_loader.dataset.name}.txt")
     
     with open(txt_path, "w", encoding="utf-8") as f:
         f.write(text_content)
         
     print(f"Metrics successfully saved to: {txt_path}")
 
-    print("Try Plotting results.")
-    plot_mean_average(
-        object_results=metrics["eval_obj_entry"],   # or test_ ?
-        root_save_path=output_dir, 
-        save_name=exp_name
-    )
+    # print("Try Plotting results.")
+    # plot_mean_average(
+    #     object_results=metrics["eval_obj_entry"],   # or test_ ?
+    #     root_save_path=output_dir, 
+    #     save_name=exp_name
+    # )
 
 
 
